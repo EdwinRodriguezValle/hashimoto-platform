@@ -24,10 +24,11 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # Copiar el JAR desde el build stage
-COPY --from=build /app/target/patient-service-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 
 # Exponer puerto
 EXPOSE 8080
 
 # Ejecutar
 ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD []
