@@ -1,0 +1,74 @@
+# ==========================================
+# 1. Compilación de Java y Maven (Estructura Global)
+# ==========================================
+**/target/
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+HELP.md
+
+# ==========================================
+# 2. Frontend: React + Vite + Node.js
+# ==========================================
+**/node_modules/
+node_modules/
+**/dist/
+dist/
+.eslintcache
+.stylelintcache
+*.local
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==========================================
+# 3. Docker, Logs y Bases de Datos
+# ==========================================
+**/logs/
+*.log
+**/.data/
+.data/
+**/postgres-data/
+
+# ==========================================
+# 4. Configuración de IDEs y Editores
+# ==========================================
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### VS Code ###
+.vscode/
+
+### STS & Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# ==========================================
+# 5. Archivos del Sistema Operativo
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
