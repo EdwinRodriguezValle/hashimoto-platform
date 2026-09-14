@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Ignorar todos los logs generados por la aplicación de forma local o en Docker
+**/logs/
+*.log
