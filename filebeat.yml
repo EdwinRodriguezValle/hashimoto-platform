@@ -1,0 +1,8 @@
+filebeat.inputs:
+  - type: filestream
+    id: patient-service-logs
+    paths:
+      - /app/logs/*.log
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
