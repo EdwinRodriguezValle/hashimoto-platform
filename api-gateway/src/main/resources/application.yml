@@ -12,3 +12,12 @@ spring:
           uri: http://localhost:8080
           predicates:
             - Path=/api/patients/**
+
+  # --- AÑADE ESTE BLOQUE DE SEGURIDAD NUEVO ---
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # URL del Realm (reino) de seguridad que crearemos en Keycloak
+          issuer-uri: http://localhost:8082/realms/hashimoto-realm
+          jwk-set-uri: http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs
