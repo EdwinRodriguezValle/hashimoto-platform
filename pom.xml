@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 1. El corazón de la plataforma: Spring Boot 3.3.1 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.1</version>
+        <relativePath/> <!-- busca en el repositorio central -->
+    </parent>
+
+    <groupId>com.hashimoto.platform</groupId>
+    <artifactId>hashimoto-platform-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>hashimoto-platform-parent</name>
+    <description>Módulo Padre y Orquestador de la Hashimoto Platform</description>
+
+    <!-- 2. Registro de Módulos (Tus microservicios) -->
+    <modules>
+        <module>api-gateway</module>
+        <module>patient-service</module>
+        <!-- Los próximos 10 servicios se listarán aquí abajo -->
+    </modules>
+
+    <!-- 3. Centralización Absoluta de Versiones Globales -->
+    <properties>
+        <java.version>21</java.version>
+        <spring-cloud.version>2023.0.3</spring-cloud.version> <!-- Compatible con Boot 3.3.1 -->
+        <axon.version>4.10.0</axon.version>
+    </properties>
+
+    <!-- 4. CONTROL DE VERSIONES (No inyecta nada, solo dicta la regla del juego) -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Cloud (Para tu API Gateway y Discovery si usas) -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Ecosistema Axon Framework -->
+            <dependency>
+                <groupId>org.axonframework</groupId>
+                <artifactId>axon-spring-boot-starter</artifactId>
+                <version>${axon.version}</version>
+            </dependency>
+
+            <!-- Extensión Axon para Kafka -->
+            <dependency>
+                <groupId>org.axonframework.extensions.kafka</groupId>
+                <artifactId>axon-kafka-spring-boot-starter</artifactId>
+                <version>${axon.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 5. HERENCIA TOTAL (Todos los hijos tienen esto de nacimiento, sin excepción) -->
+    <dependencies>
+        <!-- Lombok para ahorrarnos código repetitivo -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Monitoreo de salud para Prometheus / Grafana -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Herramientas de Testing Base -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>

@@ -1,4 +1,29 @@
 services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    container_name: hashimoto-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+    ports:
+      - "8082:8080" # <-- Puerto 8082 en tu máquina física Keycloak en el puerto 8080 (dentro de la red interna de Docker) y exponerlo hacia afuera en tu máquina local en el puerto 8082
+    volumes:
+      # 2. MAPEAMOS TU CONFIGURACIÓN AL CONTENEDOR 📁
+      # Vincula tu carpeta local con la carpeta interna donde Keycloak busca los JSON para importar
+      - ./keycloak-config:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - platform-network
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -6,6 +31,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    networks:
+      - platform-network
 
   grafana:
     image: grafana/grafana:latest
@@ -14,6 +41,8 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+    networks:
+      - platform-network
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
@@ -31,6 +60,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - platform-network
+
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.15.0
@@ -42,6 +74,8 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+    networks:
+      - platform-network
 
   postgres:
     image: postgres:16
@@ -52,11 +86,16 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    volumes:
+      - ./init-scripts:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres -d patient_db" ]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - platform-network
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -78,6 +117,8 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    networks:
+      - platform-network
 
   patient-service:
     build:
@@ -86,12 +127,6 @@ services:
     container_name: patient-service
     ports:
       - "8080:8080"
-#    environment:
-#      - AXON_AXONSERVER_ENABLED=false
-#      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/patient_db
-#      - SPRING_DATASOURCE_USERNAME=postgres
-#      - SPRING_DATASOURCE_PASSWORD=postgres
-#      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,6 +134,8 @@ services:
         condition: service_healthy
     volumes:
       - patient_logs:/app/logs
+    networks:
+      - platform-network
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.15.0
@@ -112,7 +149,14 @@ services:
         condition: service_healthy
       patient-service:
         condition: service_started
+    networks:
+      - platform-network
 
 volumes:
   esdata:
   patient_logs:
+  postgres_data: # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
+
+networks:
+  platform-network:
+    driver: bridge # Crea una red interna tipo puente para interconectar los contenedores

@@ -6,6 +6,7 @@ import com.hashimoto.patient_service.query.PatientView;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.queryhandling.QueryGateway;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class PatientControllerAPI {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ROLE_ADMIN')") // <-- 2. PROTEGEMOS EL ENDPOINT PARA SOLO ADMIN
     public CompletableFuture<String> createPatient(@RequestBody CreatePatientRequest request) {
 
         // Aquí puedes generar un UUID único para el paciente
