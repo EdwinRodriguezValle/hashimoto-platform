@@ -4,69 +4,47 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- 1. Enlace directo al Padre de la Hashimoto Platform -->
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.1</version>
-        <relativePath/>
+        <groupId>com.hashimoto.platform</groupId>
+        <artifactId>hashimoto-platform-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath> <!-- Sube un nivel para heredar del centro de mandos -->
     </parent>
 
-    <groupId>com.hashimoto</groupId>
     <artifactId>api-gateway</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
     <name>api-gateway</name>
-    <description>API Gateway central de la plataforma Hashimoto</description>
-
-    <properties>
-        <java.version>21</java.version>
-        <spring-cloud.version>2023.0.2</spring-cloud.version>
-    </properties>
+    <description>API Gateway de la Plataforma basado en Spring Cloud Gateway</description>
 
     <dependencies>
-        <!-- El motor principal del API Gateway -->
+        <!-- 2. Spring Cloud Gateway (Entorno Reactivo Netty) -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
         </dependency>
 
-        <!-- Monitoreo de salud para el Gateway -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-        <!-- Pruebas -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+        <!-- 3. Seguridad Perimetral Core -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- Conector OAuth2 / Resource Server para validar Tokens JWT -->
+        <!-- 4. Servidor de Recursos (Necesario para validar los tokens JWT de Keycloak) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
-    </dependencies>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+        <!-- 5. Cliente OAuth2 (¡INDISPENSABLE! Activa la fábrica del filtro TokenRelay) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+    </dependencies>
 
     <build>
         <plugins>
+            <!-- Plugin de empaquetado heredado de la configuración del Padre -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -74,3 +52,4 @@
         </plugins>
     </build>
 </project>
+

@@ -14,6 +14,10 @@ services:
       KC_DB_PASSWORD: postgres
     ports:
       - "8082:8080" # <-- Puerto 8082 en tu máquina física Keycloak en el puerto 8080 (dentro de la red interna de Docker) y exponerlo hacia afuera en tu máquina local en el puerto 8082
+    volumes:
+      # 2. MAPEAMOS TU CONFIGURACIÓN AL CONTENEDOR 📁
+      # Vincula tu carpeta local con la carpeta interna donde Keycloak busca los JSON para importar
+      - ./keycloak-config:/opt/keycloak/data/import:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,6 +88,7 @@ services:
       - "5432:5432"
     volumes:
       - ./init-scripts:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres -d patient_db" ]
       interval: 5s
@@ -150,6 +155,7 @@ services:
 volumes:
   esdata:
   patient_logs:
+  postgres_data: # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
 
 networks:
   platform-network:

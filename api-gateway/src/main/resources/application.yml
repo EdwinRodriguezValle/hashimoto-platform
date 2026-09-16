@@ -12,6 +12,8 @@ spring:
           uri: http://localhost:8080
           predicates:
             - Path=/api/patients/**
+          filters:
+            - TokenRelay= # Pasa el JWT hacia el microservicio
 
   # --- AÑADE ESTE BLOQUE DE SEGURIDAD NUEVO ---
   security:
