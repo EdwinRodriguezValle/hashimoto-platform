@@ -72,3 +72,8 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# --- Prometheus Telemetry Data ---
+prometheus_data/
+prometheus_data/**
+.prometheus_data/
