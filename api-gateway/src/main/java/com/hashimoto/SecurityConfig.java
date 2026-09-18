@@ -2,6 +2,8 @@ package com.hashimoto;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
@@ -10,20 +12,14 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @EnableWebFluxSecurity // <-- Activamos la seguridad reactiva oficial de Spring Boot 3
 public class SecurityConfig {
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE) // 👈 Forzar a que esta regla se evalúe de primero
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http
-                // 1. Desactivamos CSRF ya que trabajaremos con Tokens JWT
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
-
-                // 2. Definimos las reglas de los endpoints
                 .authorizeExchange(exchanges -> exchanges
-                        // Permitimos ver el estado de salud del gateway sin token
-                        .pathMatchers("/actuator/**").permitAll()
-                        // CUALQUIER otra petición a las APIs exige autenticación obligatoria
+                        .pathMatchers("/actuator/health", "/actuator/prometheus", "/error").permitAll()
                         .anyExchange().authenticated()
                 )
-
-                // 3. Le ordenamos al Gateway actuar como Resource Server para validar JWTs
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
 
         return http.build();

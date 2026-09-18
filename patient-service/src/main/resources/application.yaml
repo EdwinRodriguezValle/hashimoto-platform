@@ -56,3 +56,19 @@ logging:
   level:
     org.springframework.security: DEBUG
     org.axonframework: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expone solo los endpoints necesarios por seguridad (Health y Prometheus)
+        include: "health,prometheus"
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      # Añade el nombre del microservicio automáticamente a cada métrica
+      application: ${spring.application.name}
