@@ -1,3 +1,22 @@
+## 🌐 Exposed Ports & Interactive Entry Points
 
-Grafana y prmomethues
-JVM (Micrometer) — ID: 4701¿Qué mide?: Uso de memoria Heap/Non-Heap, hilos activos, comportamiento del Garbage Collector (GC) y consumo de CPU del proceso Java.Por qué lo necesitas: Es el estándar absoluto de la industria para cualquier aplicación Spring Boot. Te dirá de inmediato si patient-service o api-gateway se están quedando sin memoria.Spring Boot 3.x (Statistics) — ID: 19011 o 12900¿Qué mide?: Rendimiento de los servidores embebidos (Tomcat en el servicio de pacientes, Netty en el API Gateway), cantidad de peticiones HTTP por segundo (RPS) y tasas de error (4xx y 5xx).Por qué lo necesitas: Te permite filtrar las métricas usando la etiqueta application que configuramos dinámicamente en tu application.yml (api-gateway vs. patient-service).Spring Cloud Gateway (Netty) — ID: 14013¿Qué mide?: Tiempos de respuesta (latencia) del enrutador perimetral, estado de las conexiones HTTP de Netty y volumen de datos que fluye a través de tus rutas hacia los microservicios core.Por qué lo necesitas: Vital para auditar la salud específica de tu api-gateway (puerto 8081).
+When the platform is running locally via Docker Compose, all core infrastructure tools, administration consoles, and gateway endpoints are exposed on your host machine. You can click directly on the links below to access them:
+
+### 👤 Core Application & Gateway Interfaces
+*   **API Gateway (Perimeter Router):** [http://localhost:8081](http://localhost:8081) — Central reactive entry point. All microservices traffic (e.g., `/api/patients/**`) routes through here.
+*   **Patient Core Service:** [http://localhost:8080](http://localhost:8080) — Core backend microservice. Directly exposes Spring Actuator metrics locally.
+
+### 🔐 Identity & Access Management (IAM)
+*   **Keycloak Server:** [http://localhost:8082](http://localhost:8082) — Corporate Identity Administration console. Manages user records, RBAC roles, and token signing for the `hashimoto-realm`.
+
+### 📊 Performance Metrics & Telemetry (Prometheus + Grafana Stack)
+*   **Grafana Dashboards:** [http://localhost:3000](http://localhost:3000) — Analytics visualization web ui. Use credentials `admin` / `admin` to view JVM and Spring Boot health.
+*   **Prometheus Engine:** [http://localhost:9090](http://localhost:9090) — Time-series database dashboard. Access [http://localhost:9090/targets](http://localhost:9090/targets) to check scrapers status.
+
+### 🔍 Centralized Log Aggregation (ELK Stack)
+*   **Kibana Console:** [http://localhost:5601](http://localhost:5601) — Operational log explorer dashboard. Map your Data Views (`hashimoto-logs-*`) here to trace live logs.
+*   **Elasticsearch Cluster:** [http://localhost:9200](http://localhost:9200) — High-performance text indexing datastore engine.
+
+### 🗄️ Backend Infrastructure (Database & Event Streaming)
+*   **PostgreSQL Engine:** `localhost:5432` — Unified relational server hosting isolated database schemas: `patient_db` and `keycloak_db`.
+*   **Apache Kafka Broker:** `localhost:9092` — Event-driven asynchronous messaging cluster managing the `patient-events` topics.
