@@ -8,11 +8,11 @@
         </encoder>
     </appender>
 
-    <!-- Appender para guardar en archivo (RUTA CAMBIADA A ./logs) -->
+    <!-- Appender para guardar en archivo -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-./app/logs/api-gateway.log}</file>
+        <file>${LOG_PATH:-/app/logs/patient-service.log}</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>./app/logs/patient-service.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>/app/logs/patient-service.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>
         <encoder>

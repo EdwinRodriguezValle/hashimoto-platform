@@ -51,8 +51,7 @@ axon:
 
 logging:
   file:
-    # 💥 LA MAGIA SENIOR: Si existe la variable LOG_PATH usa esa ruta,
-    # si no existe (como en Docker), guarda el archivo por defecto en /app/logs/patient-service.log
+    # Ruta definitiva: siempre /app/logs/... dentro del contenedor
     name: ${LOG_PATH:/app/logs/patient-service.log}
   level:
     org.springframework.security: DEBUG

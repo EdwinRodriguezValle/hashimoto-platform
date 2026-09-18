@@ -3,7 +3,7 @@ filebeat.inputs:
     id: patient-service-logs
     enabled: true # 👈 ¡OBLIGATORIO para activar la lectura!
     paths:
-      - /app/logs/*.log # 👈 ¡RUTA ABSOLUTA SIN EL PUNTO!
+      - /app/logs/*.log # 🔒 Ruta única y consistente: host ./hashimoto_logs -> contenedor /app/logs
 
     # Agrupa los errores multilínea de Java para que no salgan rotos en Kibana
     parsers:

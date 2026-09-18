@@ -133,7 +133,7 @@ services:
       elasticsearch:
         condition: service_healthy
     volumes:
-      - ./patient_logs:/app/app/logs # 📁 Montar la carpeta de logs en /app/app/logs para que coincida con la ruta usada por las apps
+      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
     networks:
       - platform-network
 
@@ -149,17 +149,17 @@ services:
       keycloak:
         condition: service_started
     volumes:
-      - ./patient_logs:/app/app/logs # 📁 Montar la carpeta de logs en /app/app/logs para que coincida con la ruta usada por las apps
+      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
     networks:
       - platform-network
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.15.0
     container_name: filebeat
-    user: "1000:1000"
+    user: root
     command: [ "--strict.perms=false" ]
     volumes:
-      - ./patient_logs:/app/app/logs # 📁 Montar la carpeta de logs en /app/app/logs para que coincida con la ruta usada por las apps
+      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
     depends_on:
       elasticsearch:
@@ -169,7 +169,7 @@ services:
 
 volumes:
   esdata:
-  patient_logs:
+  hashimoto_logs:
   postgres_data: # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
 
 networks:

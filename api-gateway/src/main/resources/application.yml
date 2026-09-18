@@ -24,5 +24,5 @@ spring:
 
 logging:
   file:
-    # 💥 Si no hay variable local, Docker guardará el archivo en /app/logs/api-gateway.log
+    # Ruta definitiva: siempre /app/logs/... dentro del contenedor
     name: ${LOG_PATH:"/app/logs/api-gateway.log}"
