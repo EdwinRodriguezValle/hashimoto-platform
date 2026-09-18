@@ -1,0 +1,18 @@
+spring:
+    cloud:
+        gateway:
+            routes:
+                - id: patient-service-route # 👈 Describe el destino. ¡Usa dos puntos, no el signo igual!
+                  uri: http://localhost:8080
+                  predicates:
+                      - Path=/api/patients/** # 👈 Asegura el espacio después del guion
+
+    security:
+        oauth2:
+            resourceserver:
+                jwt:
+                    issuer-uri: http://localhost:8082/realms/hashimoto-realm
+                    jwk-set-uri: http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs
+
+# 💥 Variable de entorno para tus logs locales en formato YAML
+LOG_PATH: "../patient_logs/api-gateway.log"

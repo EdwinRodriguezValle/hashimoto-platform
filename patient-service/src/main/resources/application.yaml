@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: patient-service
+
+  # Forzar a Spring Boot a levantar el servidor web Tomcat
+  main:
+    web-application-type: servlet
+
+  # Configuración de base de datos orientada a la red de Docker
+  datasource:
+    url: jdbc:postgresql://postgres:5432/patient_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  # Configuración de Hibernate / JPA
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  # Infraestructura unificada de Kafka en Docker
+  kafka:
+    bootstrap-servers: kafka:29092
+
+  # 🔐 Configuración base de Keycloak dentro de la red de Docker
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/hashimoto-realm
+
+# Configuración del motor de Axon Framework e integración con Kafka
+axon:
+  # Desactivar la búsqueda automática de Axon Server
+  axonserver:
+    enabled: false
+
+  kafka:
+    bootstrap-servers: kafka:29092
+    default-topic: patient-events
+    producer:
+      event-processor-mode: subscribing
+
+    # Serializadores obligatorios para enviar bytes a Kafka
+    properties:
+      key:
+        serializer: org.apache.kafka.common.serialization.StringSerializer
+      value:
+        serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+
+logging:
+  file:
+    # 💥 LA MAGIA SENIOR: Si existe la variable LOG_PATH usa esa ruta,
+    # si no existe (como en Docker), guarda el archivo por defecto en /app/logs/patient-service.log
+    name: ${LOG_PATH:/app/logs/patient-service.log}
+  level:
+    org.springframework.security: DEBUG
+    org.axonframework: INFO

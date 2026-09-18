@@ -63,7 +63,6 @@ services:
     networks:
       - platform-network
 
-
   kibana:
     image: docker.elastic.co/kibana/kibana:8.15.0
     container_name: kibana
@@ -122,9 +121,10 @@ services:
 
   patient-service:
     build:
-      context: ./patient-service
-      dockerfile: Dockerfile
+      context: . # 💥 CONTEXTO EN LA RAÍZ GLOBAL: Así puede leer el POM Padre
+      dockerfile: patient-service/Dockerfile # Ruta exacta desde la raíz
     container_name: patient-service
+    user: "1000:1000"
     ports:
       - "8080:8080"
     depends_on:
@@ -133,22 +133,37 @@ services:
       elasticsearch:
         condition: service_healthy
     volumes:
-      - patient_logs:/app/logs
+      - ./patient_logs:/app/app/logs # 📁 Montar la carpeta de logs en /app/app/logs para que coincida con la ruta usada por las apps
+    networks:
+      - platform-network
+
+  api-gateway:
+    build:
+      context: . # 💥 CONTEXTO EN LA RAÍZ GLOBAL: Para heredar del padre
+      dockerfile: api-gateway/Dockerfile # Ruta exacta desde la raíz
+    container_name: api-gateway
+    user: "1000:1000"
+    ports:
+      - "8081:8081"
+    depends_on:
+      keycloak:
+        condition: service_started
+    volumes:
+      - ./patient_logs:/app/app/logs # 📁 Montar la carpeta de logs en /app/app/logs para que coincida con la ruta usada por las apps
     networks:
       - platform-network
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:8.15.0
     container_name: filebeat
-    user: root
+    user: "1000:1000"
+    command: [ "--strict.perms=false" ]
     volumes:
-      - patient_logs:/app/logs
+      - ./patient_logs:/app/app/logs # 📁 Montar la carpeta de logs en /app/app/logs para que coincida con la ruta usada por las apps
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
     depends_on:
       elasticsearch:
         condition: service_healthy
-      patient-service:
-        condition: service_started
     networks:
       - platform-network
 

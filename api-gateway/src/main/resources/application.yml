@@ -9,17 +9,20 @@ spring:
     gateway:
       routes:
         - id: patient-service-route
-          uri: http://localhost:8080
+          uri: http://patient-service:8080 # 👈 URL interna de la red de Docker
           predicates:
             - Path=/api/patients/**
           filters:
-            - TokenRelay= # Pasa el JWT hacia el microservicio
+            - TokenRelay=
 
-  # --- AÑADE ESTE BLOQUE DE SEGURIDAD NUEVO ---
   security:
     oauth2:
       resourceserver:
         jwt:
-          # URL del Realm (reino) de seguridad que crearemos en Keycloak
-          issuer-uri: http://localhost:8082/realms/hashimoto-realm
-          jwk-set-uri: http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs
+          issuer-uri: http://keycloak:8080/realms/hashimoto-realm # 👈 Puerto interno 8080
+          jwk-set-uri: http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+
+logging:
+  file:
+    # 💥 Si no hay variable local, Docker guardará el archivo en /app/logs/api-gateway.log
+    name: ${LOG_PATH:"/app/logs/api-gateway.log}"

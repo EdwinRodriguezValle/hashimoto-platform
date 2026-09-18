@@ -5,5 +5,19 @@ filebeat.inputs:
     paths:
       - /app/logs/*.log
 
+    # 🛠️ TRUCO SENIOR: Agrupa los errores largos de Java en un solo bloque en lugar de romperlos línea por línea
+    parsers:
+      - multiline:
+          type: pattern
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}' # Busca fechas tipo 2026-09-17
+          negate: true
+          match: after
+
+# 📦 Configuración del índice para ordenar los libros en la biblioteca de Elasticsearch
+setup.ilm.enabled: false
+setup.template.name: "hashimoto-logs"
+setup.template.pattern: "hashimoto-logs-*"
+
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
+  index: "hashimoto-logs-%{+yyyy.MM.dd}" # Crea un índice diario ordenado

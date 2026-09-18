@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- Appender para ver los logs en la consola (Docker logs) -->
+    <!-- Appender para ver los logs en la consola (Docker logs / IDE local) -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Appender para guardar en archivo (RUTA CAMBIADA A ./logs) -->
+    <!-- Appender para guardar en archivo (Usando la variable dinámica LOG_PATH) -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 💥 TRUCO SENIOR: Leemos la propiedad que definimos en tu application.yml -->
         <file>${LOG_PATH:-./app/logs/api-gateway.log}</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>./app/logs/patient-service.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_PATH:-./app/logs/api-gateway}.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>
         <encoder>
