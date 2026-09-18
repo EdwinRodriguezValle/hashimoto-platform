@@ -25,4 +25,20 @@ spring:
 logging:
   file:
     # Ruta definitiva: siempre /app/logs/... dentro del contenedor
-    name: ${LOG_PATH:"/app/logs/api-gateway.log}"
+    name: ${LOG_PATH:/app/logs/api-gateway.log}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expone solo los endpoints necesarios por seguridad (Health y Prometheus)
+        include: "health,prometheus"
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      # Añade el nombre del microservicio automáticamente a cada métrica
+      application: ${spring.application.name}

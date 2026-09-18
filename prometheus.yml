@@ -1,8 +1,17 @@
 global:
-  scrape_interval: 5s
+  scrape_interval: 15s     # Tiempo que espera entre raspados
+  evaluation_interval: 15s # Tiempo para evaluar reglas de alerta
 
 scrape_configs:
-  - job_name: 'patient-service'
+  # 1. Monitorearse a sí mismo
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Raspado de la Hashimoto Platform (Spring Boot Actuator)
+  - job_name: 'hashimoto-apps'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['patient-service:8080']
+      - targets:
+          - 'patient-service:8080'
+          - 'api-gateway:8081'
