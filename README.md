@@ -1,37 +1,22 @@
-# Hashimoto Platform - Módulo de Observabilidad (Métricas)
+## 🌐 Exposed Ports & Interactive Entry Points
 
-Este pilar de la plataforma administra la telemetría, rendimiento de hardware y salud de las Máquinas Virtuales de Java (JVM) en tiempo real mediante un esquema unificado de recolección tipo *pull* (raspado) no invasivo.
+When the platform is running locally via Docker Compose, all core infrastructure tools, administration consoles, and gateway endpoints are exposed on your host machine. You can click directly on the links below to access them:
 
-## 🏗️ Arquitectura del Stack de Métricas
+### 👤 Core Application & Gateway Interfaces
+*   **API Gateway (Perimeter Router):** [http://localhost:8081](http://localhost:8081) — Central reactive entry point. All microservices traffic (e.g., `/api/patients/**`) routes through here.
+*   **Patient Core Service:** [http://localhost:8080](http://localhost:8080) — Core backend microservice. Directly exposes Spring Actuator metrics locally.
 
-1. **Spring Boot Actuator & Micrometer:** Cada microservicio (`api-gateway` y `patient-service`) recopila métricas nativas y las expone en formato compatible con Prometheus a través del endpoint `/actuator/prometheus`.
-2. **Prometheus Server (Puerto 9090):** Actúa como el motor de almacenamiento de series temporales. Realiza un raspado (scrape) planificado cada 15 segundos hacia la red interna de Docker.
-3. **Grafana Labs (Puerto 3000):** Capa de analítica y visualización interactiva conectada de forma nativa a Prometheus como Datasource aprovisionado por código.
+### 🔐 Identity & Access Management (IAM)
+*   **Keycloak Server:** [http://localhost:8082](http://localhost:8082) — Corporate Identity Administration console. Manages user records, RBAC roles, and token signing for the `hashimoto-realm`.
 
-## 🔐 Configuración de Seguridad (SecOps)
+### 📊 Performance Metrics & Telemetry (Prometheus + Grafana Stack)
+*   **Grafana Dashboards:** [http://localhost:3000](http://localhost:3000) — Analytics visualization web ui. Use credentials `admin` / `admin` to view JVM and Spring Boot health.
+*   **Prometheus Engine:** [http://localhost:9090](http://localhost:9090) — Time-series database dashboard. Access [http://localhost:9090/targets](http://localhost:9090/targets) to check scrapers status.
 
-Para garantizar un entorno de producción seguro y de privilegios limitados:
-* El contenedor de Prometheus se ejecuta bajo el estándar de ID de usuario estricto `user: "1000:1000"`.
-* La persistencia se realiza en el directorio local del host `./prometheus_data`. Los permisos del directorio deben cambiarse explícitamente en el host físico ejecutando:  
-  `sudo chown -R 1000:1000 ./prometheus_data`
-* Se excluyeron los endpoints críticos de telemetría de los filtros de bloqueo de OAuth2/Keycloak y del enrutamiento de errores en Java:
-  `.requestMatchers("/actuator/health", "/actuator/prometheus", "/error").permitAll()`
+### 🔍 Centralized Log Aggregation (ELK Stack)
+*   **Kibana Console:** [http://localhost:5601](http://localhost:5601) — Operational log explorer dashboard. Map your Data Views (`hashimoto-logs-*`) here to trace live logs.
+*   **Elasticsearch Cluster:** [http://localhost:9200](http://localhost:9200) — High-performance text indexing datastore engine.
 
-## 🚀 Despliegue y Verificación en Local
-
-1. Compile las aplicaciones del Monorepo actualizando el POM Padre:
-   ```bash
-   mvn clean package -DskipTests
-   ```
-2. Levante la infraestructura completa reconstruyendo las imágenes:
-   ```bash
-   docker compose up -d --build
-   ```
-3. Verifique el estado de los canales de raspado ingresando a: `http://localhost:9090/targets`. Ambos servicios (`api-gateway` y `patient-service`) deben figurar en estado **UP**.
-4. Ingrese al entorno gráfico de visualización en `http://localhost:3000` (Credenciales por defecto configuradas en el entorno: `admin` / `admin`).
-
-## 📊 Dashboards Oficiales de la Comunidad Incorporados
-
-Para visualizar el rendimiento de la plataforma sin configuraciones manuales, importe los siguientes identificadores dentro de Grafana seleccionando el origen de datos pre-configurado:
-* **JVM Dashboard (Micrometer):** ID `4701` (Uso de memoria Heap, comportamiento del Garbage Collector e hilos activos).
-* **Spring Boot 3.x Statistics:** ID `19011` (Monitoreo de tráfico, peticiones HTTP por segundo y tasas de respuesta por microservicio).
+### 🗄️ Backend Infrastructure (Database & Event Streaming)
+*   **PostgreSQL Engine:** `localhost:5432` — Unified relational server hosting isolated database schemas: `patient_db` and `keycloak_db`.
+*   **Apache Kafka Broker:** `localhost:9092` — Event-driven asynchronous messaging cluster managing the `patient-events` topics.
