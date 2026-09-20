@@ -77,3 +77,19 @@ Thumbs.db
 prometheus_data/
 prometheus_data/**
 .prometheus_data/
+
+# --- React + Vite Frontend (hashimoto-tracker-app) ---
+hashimoto-tracker-app/node_modules/
+hashimoto-tracker-app/dist/
+hashimoto-tracker-app/dist-ssr/
+hashimoto-tracker-app/*.local
+hashimoto-tracker-app/.env
+hashimoto-tracker-app/.env.*.local
+hashimoto-tracker-app/.eslintcache
+
+# --- IDEs & System Files ---
+hashimoto-tracker-app/.vscode/
+hashimoto-tracker-app/.idea/
+hashimoto-tracker-app/npm-debug.log*
+hashimoto-tracker-app/yarn-debug.log*
+hashimoto-tracker-app/yarn-error.log*

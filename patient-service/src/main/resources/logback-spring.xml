@@ -1,26 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- Appender para ver los logs en la consola (Docker logs) -->
+    <!-- Appender para ver los logs en la consola (IntelliJ / Docker logs) -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Appender para guardar en archivo -->
+    <!-- Appender unificado para guardar en archivo (Docker & Local Hybrid) -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH:-/app/logs/patient-service.log}</file>
+        <!--
+          DOCKER: Si ${LOG_PATH} viene de Docker, escribirá en /app/logs/api-gateway.log o patient-service.log
+          LOCAL: Si estás en IntelliJ, el fallback es subir un nivel (../) para salir de la carpeta del microservicio
+                 y escribir directamente en la carpeta compartida global de la raíz: ../hashimoto_logs/
+        -->
+        <file>${LOG_PATH:-../hashimoto_logs/patient-service.log}</file>
+
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>/app/logs/patient-service.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Sintaxis corregida: Un solo patrón limpio usando la misma lógica de fallback -->
+            <fileNamePattern>${LOG_PATH:-../hashimoto_logs}/patient-service.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>
+
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- El nivel ROOT envía la información a ambos destinos -->
+    <!-- Configuración del nivel de logs global -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
