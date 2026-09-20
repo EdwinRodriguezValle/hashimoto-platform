@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- React + Vite Frontend (hashimoto-tracker-app) ---
+hashimoto-tracker-app/node_modules/
+hashimoto-tracker-app/dist/
+hashimoto-tracker-app/dist-ssr/
+hashimoto-tracker-app/*.local
+hashimoto-tracker-app/.env
+hashimoto-tracker-app/.env.*.local
+hashimoto-tracker-app/.eslintcache
+
+# --- IDEs & System Files ---
+hashimoto-tracker-app/.vscode/
+hashimoto-tracker-app/.idea/
+hashimoto-tracker-app/npm-debug.log*
+hashimoto-tracker-app/yarn-debug.log*
+hashimoto-tracker-app/yarn-error.log*

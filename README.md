@@ -20,3 +20,10 @@ When the platform is running locally via Docker Compose, all core infrastructure
 ### 🗄️ Backend Infrastructure (Database & Event Streaming)
 *   **PostgreSQL Engine:** `localhost:5432` — Unified relational server hosting isolated database schemas: `patient_db` and `keycloak_db`.
 *   **Apache Kafka Broker:** `localhost:9092` — Event-driven asynchronous messaging cluster managing the `patient-events` topics.
+
+##  Frontend Development & Hot Reloading
+The frontend React application is served via Vite's development server. You can access the live application at [http://localhost:5173](http://localhost:5173). 
+The Vite server supports hot module replacement (HMR), so any changes you make to the source code will be reflected in the browser without a full page reload.      
+
+### 🧪 Testing & Development Utilities
+*   **Testcontainers Admin Console:** [http://localhost:8083](http://localhost
