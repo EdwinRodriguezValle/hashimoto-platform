@@ -1,4 +1,52 @@
 services:
+  # Database: PostgreSQL
+  postgres:
+    image: postgres:16
+    container_name: patient-postgres
+    environment:
+      POSTGRES_DB: patient_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-scripts:/docker-entrypoint-initdb.d
+      # 👇 NUEVO MAPEO: Inyecta la configuración del Datasource automáticamente
+      - postgres_data:/var/lib/postgresql/data # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d patient_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - platform-network
+
+# Message Broker: Apache Kafka
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    networks:
+      - platform-network
+
+
+  # Security and Identity Management
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.5
     container_name: hashimoto-keycloak
@@ -31,6 +79,7 @@ services:
     networks:
       - platform-network
 
+# Observability Stack: Prometheus + Grafana
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -58,6 +107,21 @@ services:
     networks:
       - platform-network
     restart: unless-stopped
+
+# Centralized Logging Stack: Elasticsearch + Kibana + Filebeat
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.0
+    container_name: filebeat
+    user: root
+    command: [ "--strict.perms=false" ]
+    volumes:
+      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - platform-network
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
@@ -91,50 +155,7 @@ services:
     networks:
       - platform-network
 
-  postgres:
-    image: postgres:16
-    container_name: patient-postgres
-    environment:
-      POSTGRES_DB: patient_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./init-scripts:/docker-entrypoint-initdb.d
-       # 👇 NUEVO MAPEO: Inyecta la configuración del Datasource automáticamente
-      - postgres_data:/var/lib/postgresql/data # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d patient_db" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - platform-network
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
-    ports:
-        - "9092:9092"
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
-      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-    networks:
-      - platform-network
-
+# Microservices: Patient Service + API Gateway
   patient-service:
     build:
       context: . # 💥 CONTEXTO EN LA RAÍZ GLOBAL: Así puede leer el POM Padre
@@ -172,17 +193,17 @@ services:
     networks:
       - platform-network
 
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:8.15.0
-    container_name: filebeat
-    user: root
-    command: [ "--strict.perms=false" ]
-    volumes:
-      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
-      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+# frontend: React App + Nginx
+  frontend:
+    build:
+      context: . # Contexto global del Monorepo
+      dockerfile: hashimoto-tracker-app/Dockerfile
+    container_name: hashimoto-frontend
+    user: "1000:1000" # Alineado a tu estándar de seguridad Edwin
+    ports:
+      - "5173:80" # 💥 MAPEO SEGURO: Tu PC física escucha en el puerto 80, Nginx por dentro escucha en el 80
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      - api-gateway # Espera a que el Gateway esté levantado para poder consumir la API
     networks:
       - platform-network
 

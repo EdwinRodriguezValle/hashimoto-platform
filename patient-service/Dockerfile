@@ -1,4 +1,4 @@
-dockerfile# --- Etapa 1: Compilación y Construcción ---
+#dockerfile#--- Etapa 1: Compilación y Construcción
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
