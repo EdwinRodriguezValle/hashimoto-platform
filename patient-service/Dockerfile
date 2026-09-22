@@ -1,16 +1,15 @@
-#dockerfile#--- Etapa 1: Compilación y Construcción
+# --- Etapa 1: Compilación y Construcción ---
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
 
 # 1. Copiamos el POM Padre obligatoriamente en la raíz del WORKDIR
-COPY pom.xml .
+COPY pom.xml ./
 
-# 2. Copiamos la estructura completa del módulo de pacientes en su respectiva subcarpeta
-COPY patient-service/ ./patient-service/
+# 2. Copiamos la estructura completa (incluyendo el pom.xml padre)
+COPY . .
 
-# 💡 CORRECCIÓN MAESTRA: Compilamos desde la raíz indicando específicamente el proyecto (-pl)
-# Esto permite que Maven lea el POM Padre correctamente y resuelva las dependencias del Monorepo
-RUN mvn clean package -pl patient-service -DskipTests
+# 💡 CORRECCIÓN MAESTRA: Compilamos desde la raíz indicando específicamente el archivo (-pl)
+RUN mvn clean package -DskipTests -pl patient-service
 
 # --- Etapa 2: Imagen de Ejecución Ultra Ligera y Segura ---
 FROM eclipse-temurin:21-jre-alpine

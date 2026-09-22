@@ -29,7 +29,7 @@ RUN rm -rf ./*
 COPY --from=builder /app/dist .
 
 # INYECTAMOS TU CONFIGURACIÓN CUSTOM DE ENRUTAMIENTO REACT
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY /nginx.conf /etc/nginx/conf.d/default.conf
 
 # Modificamos los permisos de Nginx para que corra como usuario NO-ROOT (Estándar Edwin UID 1000)
 RUN touch /var/run/nginx.pid && \

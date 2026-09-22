@@ -196,8 +196,8 @@ services:
 # frontend: React App + Nginx
   frontend:
     build:
-      context: . # Contexto global del Monorepo
-      dockerfile: hashimoto-tracker-app/Dockerfile
+      context: ./hashimoto-tracker-app
+      dockerfile: Dockerfile
     container_name: hashimoto-frontend
     user: "1000:1000" # Alineado a tu estándar de seguridad Edwin
     ports:
