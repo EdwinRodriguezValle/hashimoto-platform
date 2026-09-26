@@ -113,7 +113,7 @@ services:
     user: root
     command: [ "--strict.perms=false" ]
     volumes:
-      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
+      - ./logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
       - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
     depends_on:
       elasticsearch:
@@ -172,7 +172,7 @@ services:
         condition: service_healthy
 
     volumes:
-      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
+      - ./logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
     networks:
       - platform-network
 
@@ -191,7 +191,7 @@ services:
       keycloak:
         condition: service_started
     volumes:
-      - ./hashimoto_logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
+      - ./logs:/app/logs # 📁 Mapeo limpio: host ./hashimoto_logs -> contenedor /app/logs
     networks:
       - platform-network
 
@@ -211,7 +211,7 @@ services:
 
 volumes:
   esdata:
-  hashimoto_logs:
+  logs:
   postgres_data: # 👈 AGREGA ESTO para que los datos de Postgres nunca se borren
   prometheus_data:
     driver: local

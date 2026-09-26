@@ -25,4 +25,4 @@ logging:
     org.axonframework: INFO
 
 # 💥 Define la ruta física externa para el volumen compartido de tus logs
-LOG_PATH: "../patient_logs/patient-service.log"
+LOG_PATH: "../logs/api-gateway.log"
