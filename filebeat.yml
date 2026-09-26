@@ -3,7 +3,7 @@ filebeat.inputs:
     id: patient-service-logs
     enabled: true # 👈 ¡OBLIGATORIO para activar la lectura!
     paths:
-      - /app/logs/*.log # 🔒 Ruta única y consistente: host ./hashimoto_logs -> contenedor /app/logs
+      - /app/logs/*.log # 🔒 Ruta única y consistente: host ./logs -> contenedor /app/logs
 
     # Agrupa los errores multilínea de Java para que no salgan rotos en Kibana
     parsers:
@@ -15,9 +15,9 @@ filebeat.inputs:
 
 # Configuración corporativa de índices para Elasticsearch
 setup.ilm.enabled: false
-setup.template.name: "hashimoto-logs"
-setup.template.pattern: "hashimoto-logs-*"
+setup.template.name: "logs"
+setup.template.pattern: "logs-*"
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
-  index: "hashimoto-logs-%{+yyyy.MM.dd}" # Estructura tus índices por día
+  index: "logs-%{+yyyy.MM.dd}" # Estructura tus índices por día

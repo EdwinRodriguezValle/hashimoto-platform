@@ -1,51 +1,63 @@
-# ==========================================
-# 1. Compilación de Java y Maven (Estructura Global)
-# ==========================================
+# ==============================================================================
+# 1. COMPILACIÓN DE JAVA / MAVEN (Estructura Global y Microservicios)
+# ==============================================================================
 **/target/
 target/
 .mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 HELP.md
 
-# ==========================================
-# 2. Frontend: React + Vite + Node.js
-# ==========================================
+# ==============================================================================
+# 2. FRONTEND: REACT + VITE + NODE.JS (Global y subcarpetas)
+# ==============================================================================
 **/node_modules/
 node_modules/
 **/dist/
+**/dist-ssr/
 dist/
 .eslintcache
 .stylelintcache
+
+# Logs de error específicos de gestores de paquetes Node
+**/*debug.log*
+**/*error.log*
+
+# Archivos de entorno sensibles (¡NUNCA SUBIR A GIT!)
 *.local
 .env
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
-# ==========================================
-# 3. Docker, Logs y Bases de Datos
-# ==========================================
+# ==============================================================================
+# 3. DOCKER, VOLÚMENES PERSISTENTES Y LOGS CENTRALIZADOS
+# ==============================================================================
+# 📁 La nueva carpeta unificada de logs de la raíz
 **/logs/
+logs/
 *.log
+
+# Datos persistentes de bases de datos e infraestructura Docker local
 **/.data/
 .data/
 **/postgres-data/
+**/postgres_data/
+**/prometheus_data/
+**/grafana_data/
+**/esdata/
 
-# ==========================================
-# 4. Configuración de IDEs y Editores
-# ==========================================
-### IntelliJ IDEA ###
+# ==============================================================================
+# 4. CONFIGURACIÓN DE IDEs Y EDITORES (IntelliJ, VS Code, Eclipse)
+# ==============================================================================
+**/..idea/
 .idea/
 *.iws
 *.iml
 *.ipr
 out/
 
-### VS Code ###
+**/..vscode/
 .vscode/
+!.vscode/extensions.json
 
-### STS & Eclipse ###
 .apt_generated
 .classpath
 .factorypath
@@ -54,17 +66,20 @@ out/
 .springBeans
 .sts4-cache
 
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
 build/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# ==========================================
-# 5. Archivos del Sistema Operativo
-# ==========================================
+# ==============================================================================
+# 5. ARCHIVOS BASURA DEL SISTEMA OPERATIVO (Mac & Windows)
+# ==============================================================================
 .DS_Store
 .DS_Store?
 ._*
@@ -72,24 +87,3 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# --- Prometheus Telemetry Data ---
-prometheus_data/
-prometheus_data/**
-.prometheus_data/
-
-# --- React + Vite Frontend (hashimoto-tracker-app) ---
-hashimoto-tracker-app/node_modules/
-hashimoto-tracker-app/dist/
-hashimoto-tracker-app/dist-ssr/
-hashimoto-tracker-app/*.local
-hashimoto-tracker-app/.env
-hashimoto-tracker-app/.env.*.local
-hashimoto-tracker-app/.eslintcache
-
-# --- IDEs & System Files ---
-hashimoto-tracker-app/.vscode/
-hashimoto-tracker-app/.idea/
-hashimoto-tracker-app/npm-debug.log*
-hashimoto-tracker-app/yarn-debug.log*
-hashimoto-tracker-app/yarn-error.log*
