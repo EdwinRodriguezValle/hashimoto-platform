@@ -15,11 +15,11 @@
           LOCAL: Si estás en IntelliJ, el fallback es subir un nivel (../) para salir de la carpeta del microservicio
                  y escribir directamente en la carpeta compartida global de la raíz: ../hashimoto_logs/
         -->
-        <file>${LOG_PATH:-../hashimoto_logs/patient-service.log}</file>
+        <file>${LOG_PATH:-logs/patient-service.log}</file>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- Sintaxis corregida: Un solo patrón limpio usando la misma lógica de fallback -->
-            <fileNamePattern>${LOG_PATH:-../hashimoto_logs}/patient-service.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${LOG_PATH:-logs}/patient-service.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>
 
@@ -33,5 +33,4 @@
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
-
 </configuration>

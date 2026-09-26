@@ -161,6 +161,8 @@ services:
     container_name: patient-service
     ports:
       - "8080:8080"
+    environment:
+      - LOG_PATH=/app/logs/patient-service.log
     depends_on:
       postgres:
         condition: service_healthy
@@ -179,8 +181,12 @@ services:
       context: . # 💥 CONTEXTO EN LA RAÍZ GLOBAL: Para heredar del padre
       dockerfile: api-gateway/Dockerfile # Ruta exacta desde la raíz
     container_name: api-gateway
+    user: root
     ports:
       - "8081:8081"
+    entrypoint: ["sh", "-c", "sleep 15 && java -jar app.jar"]
+    environment:
+      - LOG_PATH=/app/logs/patient-service.log
     depends_on:
       keycloak:
         condition: service_started

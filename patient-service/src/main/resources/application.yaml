@@ -30,9 +30,16 @@ spring:
         jwt:
           # 👇 EL TRUCO: Le decimos al backend que el emisor esperado es el que firma el navegador físico
           # 1. El Emisor esperado: Coincide con lo que firmó tu navegador afuera en tu PC
-          issuer-uri: http://localhost:8082/realms/hashimoto-realm
+          issuer-uri: http://localhost:8080/realms/hashimoto-realm
           # 2. Dirección interna de Docker: Usa el host "keycloak" y el puerto interno "8080"
           jwk-set-uri: http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+
+            # 👇 AGREGA ESTA LÍNEA AQUÍ:
+            # Evita que Spring valide el endpoint de Keycloak obligatoriamente al arrancar
+        client:
+          provider:
+            keycloak:
+             issuer-uri: http://keycloak:8080/realms/hashimoto-realm
 
 
 
