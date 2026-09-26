@@ -18,12 +18,18 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity // 👈 Habilita el uso de @PreAuthorize en tus controladores o servicios
 public class SecurityConfig {
 
-    // 1. Inyectamos la URL de Keycloak desde las propiedades
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
-    private String issuerUri;
+    // Inyectamos la URL de los certificados de Keycloak en vez del emisor
+    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+    private String jwkSetUri;
+
+    // 🔒 UNIFICADO: Este decodificador lee localmente la firma del token sin validar HTTP en el arranque
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withJwkSetUri(this.jwkSetUri).build();
+    }
 
     @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE) // 👈 Forzar a que esta regla se evalúe de primero
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
@@ -36,12 +42,6 @@ public class SecurityConfig {
                 );
 
         return http.build();
-    }
-
-    // 3. CREAMOS EL BEAN QUE FALTA PARA EL DECODER 🔒
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
     }
 
     @Bean
