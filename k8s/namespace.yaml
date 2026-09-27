@@ -1,0 +1,10 @@
+# Esto creará las divisiones lógicas dentro del clúster de Kubernetes.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hashimoto-core
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hashimoto-infra

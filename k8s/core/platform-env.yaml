@@ -1,0 +1,24 @@
+# guardar las variables de entorno que tus aplicaciones y servicios van a leer más adelante.
+#(Nota: Para producción las contraseñas se encriptan, pero para empezar a probar las dejaremos legibles en texto plano usando un formato básico).
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: hashimoto-infra
+data:
+  DB_HOST: "postgres-service"
+  DB_NAME: "hashimoto_db"
+  DB_PORT: "5432"
+  DB_USER: "postgres"
+  KEYCLOAK_HOST: "keycloak-service"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: platform-secrets
+  namespace: hashimoto-infra
+type: Opaque
+stringData: # Usamos stringData para poder escribir la contraseña en texto plano mientras probamos
+  DB_PASSWORD: "123"
+  KEYCLOAK_ADMIN_PASSWORD: "admin"
