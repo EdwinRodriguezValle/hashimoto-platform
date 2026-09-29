@@ -20,10 +20,17 @@ spring:
       resourceserver:
         jwt:
           # 1. El Emisor esperado: Coincide con lo que firmó tu navegador afuera en tu PC
-          issuer-uri: http://localhost:8082/realms/hashimoto-realm
+#          issuer-uri: http://localhost:8082/realms/hashimoto-realm
 
           # 2. Dirección interna de Docker: Usa el host "keycloak" y el puerto interno "8080"
-          jwk-set-uri: http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+#          jwk-set-uri: http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+
+            # 🔄 Si no le pasamos variable, usa el puerto 8082 clásico de tu Docker Compose
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8082/realms/hashimoto-realm}
+
+            # 🔄 Si no le pasamos variable, usa el host 'keycloak:8080' nativo de tu Docker Compose
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs}
+
 
 logging:
   file:
