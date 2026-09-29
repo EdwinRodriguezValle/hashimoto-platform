@@ -1,5 +1,4 @@
 # Configurará un pod ejecutable apuntando a una imagen local llamada hashimoto/patient-service:latest.
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,11 +21,8 @@ spec:
           ports:
             - containerPort: 8080
           env:
-            # 📂 Variable de Logs
             - name: LOG_PATH
               value: "/app/logs/patient-service.log"
-
-            # 🗄️ Variables de Base de Datos
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres-service.hashimoto-infra.svc.cluster.local:5432/hashimoto_db"
             - name: SPRING_DATASOURCE_USERNAME
@@ -39,20 +35,29 @@ spec:
                 secretKeyRef:
                   name: platform-secrets
                   key: DB_PASSWORD
-
-            # 🦫 Variables de Kafka Broker
             - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-service.hashimoto-infra.svc.cluster.local:9092"
-
-            # 🛡️ Variables de Seguridad (URL interna de Keycloak corregida)
             - name: KEYCLOAK_AUTH_SERVER_URL
               value: "http://cluster.local"
 
-          # 📦 Solución Logback
+#          # 🩺 Sondas de salud optimizadas con margen de inicialización extendido
+#          livenessProbe:
+#            httpGet:
+#              path: /actuator/health/liveness
+#              port: 8080
+#            initialDelaySeconds: 90 # 👈 Le otorgamos 90 segundos para establecer conexiones con Postgres y Kafka
+#            periodSeconds: 15
+#            failureThreshold: 4
+#          readinessProbe:
+#            httpGet:
+#              path: /actuator/health/readiness
+#              port: 8080
+#            initialDelaySeconds: 90
+#            periodSeconds: 15
+#
           volumeMounts:
             - name: app-logs
               mountPath: /app/logs
-
       volumes:
         - name: app-logs
           emptyDir: {}

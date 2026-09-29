@@ -4,14 +4,23 @@ metadata:
   name: hashimoto-ingress
   namespace: hashimoto-core
   annotations:
-    # Desactivamos redirecciones SSL forzadas para desarrollo local en HTTP plano
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          # ⚙️ Ruta 1: Todas las peticiones que vayan a las APIs (/api) se envían al API Gateway
+          # 🛡️ Ruta de Autenticación: Apunta al puente local corregido
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak-bridge-service # 👈 ¡Corregido! Sin puntos y 100% válido
+                port:
+                  number: 8080
+
+          # ⚙️ Ruta de APIs hacia tu API Gateway
           - path: /api
             pathType: Prefix
             backend:
@@ -20,7 +29,7 @@ spec:
                 port:
                   number: 8081
 
-          # 🌐 Ruta 2: Todo el tráfico de la raíz (/) va directo a tu Frontend de manera limpia
+          # 🌐 Ruta Raíz hacia tu Frontend de React/Vite
           - path: /
             pathType: Prefix
             backend:
