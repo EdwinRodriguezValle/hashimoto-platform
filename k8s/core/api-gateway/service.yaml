@@ -1,0 +1,13 @@
+# Crea el punto de red dentro de Kubernetes para el puerto 8081.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: hashimoto-core
+spec:
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+  selector:
+    app: api-gateway

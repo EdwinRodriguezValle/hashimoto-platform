@@ -1,0 +1,13 @@
+# Creará un DNS interno dentro de Kubernetes para que el api-gateway pueda encontrar a este servicio usando el nombre http://patient-service:8080.
+apiVersion: v1
+kind: Service
+metadata:
+  name: patient-service
+  namespace: hashimoto-core
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: patient-service

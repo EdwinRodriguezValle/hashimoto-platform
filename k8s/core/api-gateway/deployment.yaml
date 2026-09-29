@@ -1,0 +1,41 @@
+# El Orquestador punta a una imagen local llamada hashimoto/api-gateway:latest
+#e incluirá también el volumen de logs para evitar el mismo problema que sufrió el servicio de pacientes.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: hashimoto-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: hashimoto/api-gateway:latest
+          imagePullPolicy: Never # Obliga a K3d a leer tu compilación local
+          ports:
+            - containerPort: 8081
+          env:
+            # 📂 Variable de Logs corregida
+            - name: LOG_PATH
+              value: "/app/logs/api-gateway.log"
+
+            # 🛡️ URL de Keycloak para validación de identidad
+            - name: KEYCLOAK_AUTH_SERVER_URL
+              value: "http://cluster.local"
+
+          # 📦 Solución Logback para el Gateway
+          volumeMounts:
+            - name: app-logs
+              mountPath: /app/logs
+
+      volumes:
+        - name: app-logs
+          emptyDir: {}

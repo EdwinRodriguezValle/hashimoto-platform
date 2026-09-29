@@ -1,0 +1,38 @@
+# Kibana se conectará de manera interna al servicio de Elasticsearch cruzando la red para pintar tus gráficos de analítica.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: hashimoto-logs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:8.15.0
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://cluster.local"
+          ports:
+            - containerPort: 5601
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-service
+  namespace: hashimoto-logs
+spec:
+  ports:
+    - port: 5601
+      targetPort: 5601
+  selector:
+    app: kibana

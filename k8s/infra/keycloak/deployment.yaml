@@ -1,0 +1,77 @@
+# Configura Keycloak 24 (la misma versión de tu Docker) y le dice exactamente cómo conectarse
+# a la base de datos postgres-0 que acabamos de levantar en el paso anterior:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: hashimoto-infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:24.0.5
+          # 👇 ACTUALIZADO: Añadimos el flag oficial de importación al comando de arranque
+          command: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: "admin"
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KEYCLOAK_ADMIN
+              value: "admin"
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            - name: KC_DB
+              value: "postgres"
+            - name: KC_DB_URL
+              value: "jdbc:postgresql://postgres-service:5432/hashimoto_db"
+            - name: KC_DB_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: DB_USER
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+          ports:
+            - containerPort: 8080
+              name: http
+          # 👇 NUEVO: Mapeamos el volumen en la carpeta de importación de Keycloak
+          volumeMounts:
+            - name: realm-volume
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+      volumes:
+        # 👇 NUEVO: Declaramos el volumen virtual leyendo desde el ConfigMap
+        - name: realm-volume
+          configMap:
+            name: keycloak-realm-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-service
+  namespace: hashimoto-infra
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: keycloak

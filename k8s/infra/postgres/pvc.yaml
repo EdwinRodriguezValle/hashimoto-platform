@@ -1,0 +1,14 @@
+# Sirve para pedirle a Kubernetes que te reserve 10 Gigabytes de espacio en tu disco para que la base de datos no se borre jamás si el pod se reinicia.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: hashimoto-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path # El proveedor de almacenamiento por defecto de K3d
+  resources:
+    requests:
+      storage: 10Gi
+
