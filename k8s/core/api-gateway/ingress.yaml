@@ -6,30 +6,30 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/enable-cors: "true"
+    # 🚀 EL TRUCO SENIOR: Corta el prefijo /api antes de enviárselo a Java para que no de 404
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          # 🛡️ Ruta de Autenticación: Apunta al puente local corregido
           - path: /auth
             pathType: Prefix
             backend:
               service:
-                name: keycloak-bridge-service # 👈 ¡Corregido! Sin puntos y 100% válido
+                name: keycloak-bridge-service
                 port:
                   number: 8080
 
-          # ⚙️ Ruta de APIs hacia tu API Gateway
-          - path: /api
-            pathType: Prefix
+          # ⚙️ Modificamos el path capturando el resto de la URL con un comodín (.*)
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: api-gateway
                 port:
                   number: 8081
 
-          # 🌐 Ruta Raíz hacia tu Frontend de React/Vite
           - path: /
             pathType: Prefix
             backend:

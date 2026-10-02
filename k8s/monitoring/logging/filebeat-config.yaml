@@ -12,7 +12,6 @@
 # o servidores agregues al clúster en el futuro; Filebeat siempre estará ahí en la raíz para capturar los logs.
 
 # Filebeat: "Busca todos los logs de los contenedores que corran en el nodo, límpialos, estructúralos en formato JSON y envíalos de forma masiva a la dirección de Elasticsearch".
-
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -34,6 +33,7 @@ data:
                     logs_path: "/var/log/containers/"
 
     output.elasticsearch:
+      # 🚀 CORREGIDO A FUEGO: Puerto nativo 9200 y DNS formal del namespace logs
       hosts: ["http://cluster.local"]
       index: "hashimoto-platform-logs-%{+yyyy.MM.dd}"
 

@@ -1,5 +1,4 @@
 # Kibana se conectará de manera interna al servicio de Elasticsearch cruzando la red para pintar tus gráficos de analítica.
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,8 +18,9 @@ spec:
         - name: kibana
           image: docker.elastic.co/kibana/kibana:8.15.0
           env:
+            # 🚀 CORREGIDO A FUEGO: Apunta directamente al servicio interno en el puerto nativo
             - name: ELASTICSEARCH_HOSTS
-              value: "http://cluster.local"
+              value: "http://elasticsearch-service:9200"
           ports:
             - containerPort: 5601
               name: http

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+spec:
+  minReadySeconds: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+      app.kubernetes.io/instance: ingress-nginx
+      app.kubernetes.io/name: ingress-nginx
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/instance: ingress-nginx
+        app.kubernetes.io/name: ingress-nginx
+    spec:
+      containers:
+        - args:
+            - /nginx-ingress-controller
+            - --election-id=ingress-nginx-leader
+            - --controller-class=k8s.io/ingress-nginx
+            - --ingress-class=nginx  # 🚀 Escucha limpia y global sin webhooks rotos ni mapas bloqueantes
+          image: registry.k8s.io/ingress-nginx/controller:v1.8.2
+          imagePullPolicy: IfNotPresent
+          name: controller
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+            - containerPort: 443
+              name: https
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LD_PRELOAD
+              value: "/usr/local/lib/libmimalloc.so"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 90Mi
+      serviceAccountName: ingress-nginx
+---
+# 🚀 EL PUENTE DEFINITIVO: Un solo separador y LoadBalancer mapeado nativamente
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    - name: https
+      port: 443
+      targetPort: https
+  selector:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
