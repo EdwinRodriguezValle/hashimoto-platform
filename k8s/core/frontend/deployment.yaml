@@ -1,0 +1,22 @@
+# Mapea tu contenedor web en el puerto 80 nativo del pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: hashimoto-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: hashimoto/frontend:latest
+          imagePullPolicy: Never # Lee tu imagen local de K3d
+          ports:
+            - containerPort: 80

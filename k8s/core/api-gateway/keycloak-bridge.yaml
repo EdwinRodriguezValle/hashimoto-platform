@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-bridge-service # 👈 Un nombre simple sin puntos, aceptado por K8s
+  namespace: hashimoto-core     # 👈 Vive en core para que el Ingress lo pueda ver
+spec:
+  type: ExternalName
+  externalName: keycloak-service.hashimoto-infra.svc.cluster.local # 🚀 El túnel hacia infra

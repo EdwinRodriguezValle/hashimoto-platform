@@ -1,0 +1,30 @@
+# Prometheus debe ser capaz de "descubrir" de forma automática los servicios leyendo a través de las fronteras de los Namespaces.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: hashimoto-ops # 👈 Aislado en OPS
+  labels:
+    component: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    scrape_configs:
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+      - job_name: 'hashimoto-apps'
+        metrics_path: '/actuator/prometheus' # Estándar de Spring Boot para producción
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            action: keep
+            regex: hashimoto-core # 👈 Monitorea solo el código de negocio

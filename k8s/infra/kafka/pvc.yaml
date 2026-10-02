@@ -1,0 +1,13 @@
+# Sirve para reservar 10 Gigabytes para que Kafka guarde sus bitácoras de logs combinadas (/tmp/kraft-combined-logs) de manera persistente.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-pvc
+  namespace: hashimoto-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi

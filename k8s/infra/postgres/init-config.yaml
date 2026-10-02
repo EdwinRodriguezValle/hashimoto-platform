@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+  namespace: hashimoto-infra
+data:
+  init.sql: |
+    -- Script de Inicialización Corporativa para Hashimoto Platform
+    CREATE DATABASE keycloak_db;
+    
+    \c hashimoto_db;
+    
+    -- 1. Tabla de Latido de Infraestructura
+    CREATE TABLE IF NOT EXISTS cluster_heartbeat (
+                                                     id SERIAL PRIMARY KEY,
+                                                     status VARCHAR(50) NOT NULL,
+        initialized_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    
+    -- 2. Tabla de Tracking Tokens (Axon con tipo OID corregido)
+    CREATE TABLE IF NOT EXISTS token_entry (
+                                               processor_name VARCHAR(255) NOT NULL,
+        segment INT NOT NULL,
+        owner VARCHAR(255),
+        timestamp VARCHAR(255) NOT NULL,
+        token OID, -- 👈 Corregido: Coincide con la expresión enviada por Java
+        token_type VARCHAR(255),
+        PRIMARY KEY (processor_name, segment)
+        );
+
+    -- 3. Tabla de Almacenamiento de Eventos de Dominio (Axon Event Store con OID)
+    CREATE TABLE IF NOT EXISTS domain_event_entry (
+                                                      global_index BIGSERIAL NOT NULL,
+                                                      aggregate_identifier VARCHAR(255) NOT NULL,
+        sequence_number BIGINT NOT NULL,
+        type VARCHAR(255),
+        event_identifier VARCHAR(255) NOT NULL,
+        meta_data OID, -- 👈 Corregido
+        payload OID NOT NULL, -- 👈 Corregido
+        payload_revision VARCHAR(255),
+        payload_type VARCHAR(255) NOT NULL,
+        time_stamp VARCHAR(255) NOT NULL,
+        PRIMARY KEY (global_index),
+        CONSTRAINT idx_domain_event_unique UNIQUE (aggregate_identifier, sequence_number)
+        );
+
+    -- 4. Tabla de Snapshots de Eventos (Axon Optimization con OID)
+    CREATE TABLE IF NOT EXISTS snapshot_event_entry (
+                                                        global_index BIGSERIAL NOT NULL,
+                                                        aggregate_identifier VARCHAR(255) NOT NULL,
+        sequence_number BIGINT NOT NULL,
+        type VARCHAR(255),
+        event_identifier VARCHAR(255) NOT NULL,
+        meta_data OID, -- 👈 Corregido
+        payload OID NOT NULL, -- 👈 Corregido
+        payload_revision VARCHAR(255),
+        payload_type VARCHAR(255) NOT NULL,
+        time_stamp VARCHAR(255) NOT NULL,
+        PRIMARY KEY (global_index),
+        CONSTRAINT idx_snapshot_event_unique UNIQUE (aggregate_identifier, sequence_number)
+        );
+    
+    INSERT INTO cluster_heartbeat (status) VALUES ('Kubernetes Deployment Successful');

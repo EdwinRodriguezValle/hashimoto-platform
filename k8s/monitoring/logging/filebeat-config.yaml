@@ -1,0 +1,40 @@
+# Filebeat es un "agente" recolector muy ligero. En docker-compose.yml estaba mapeada una ruta fija de logs (./logs).
+# En una arquitectura profesional de Kubernetes, Filebeat no lee archivos sueltos de una carpeta del proyecto;
+# se configura como un DaemonSet (un pod especial que corre en todos los nodos de tu servidor) y se encarga
+# de raspar directamente las salidas estándar de consola de Kubernetes (stdout de Docker/CRI) de forma automatizada.
+
+# Como esta configuración de DaemonSet requiere una estructura de permisos RBAC avanzada de administración del sistema para poder
+# "espiar" los logs de todos los pods, la configuraremos justo en el siguiente paso, una vez que tengamos la base de la base de datos levantada.
+
+# Para recolectar esto de forma automatizada y profesional, utilizaremos un objeto de Kubernetes llamado DaemonSet.
+# A diferencia de un Deployment común, un DaemonSet le ordena a Kubernetes: "Asegúrate de meter una copia de este pod
+# recolector dentro de todos y cada uno de los nodos (servidores) del clúster automáticamente". Así, no importa cuántas laptops
+# o servidores agregues al clúster en el futuro; Filebeat siempre estará ahí en la raíz para capturar los logs.
+
+# Filebeat: "Busca todos los logs de los contenedores que corran en el nodo, límpialos, estructúralos en formato JSON y envíalos de forma masiva a la dirección de Elasticsearch".
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: hashimoto-logs
+  labels:
+    k8s-app: filebeat
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+      - type: container
+        paths:
+          - /var/log/containers/*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+
+    output.elasticsearch:
+      hosts: ["http://cluster.local"]
+      index: "hashimoto-platform-logs-%{+yyyy.MM.dd}"
+
+    setup.ilm.enabled: false

@@ -1,0 +1,65 @@
+# El motor de datos Elasticsearch es una base de datos de tipo NoSQL optimizada para búsquedas de texto.
+# Al manejar persistencia crítica de auditoría de logs, lo desplegaremos usando un
+# StatefulSet corporativo de una sola réplica y le daremos un disco dedicado de 15 Gigabytes
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+  namespace: hashimoto-logs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 15Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: hashimoto-logs
+spec:
+  serviceName: "elasticsearch-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0 # Versión fija de tu Compose
+          env:
+            - name: discovery.type
+              value: "single-node"
+            - name: xpack.security.enabled
+              value: "false"
+            - name: ES_JAVA_OPTS
+              value: "-Xms1g -Xmx1g" # Límites de memoria Java
+          ports:
+            - containerPort: 9200
+              name: http
+          volumeMounts:
+            - name: elastic-data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: elastic-data
+          persistentVolumeClaim:
+            claimName: elasticsearch-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+  namespace: hashimoto-logs
+spec:
+  ports:
+    - port: 9200
+      targetPort: 9200
+  selector:
+    app: elasticsearch

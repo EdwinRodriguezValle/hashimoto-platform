@@ -1,0 +1,21 @@
+# Esto creará las divisiones lógicas dentro del clúster de Kubernetes.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hashimoto-core
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hashimoto-infra
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hashimoto-ops # 👈 Aquí vive la telemetría corporativa
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hashimoto-logs # 👈 La zona de almacenamiento de logs de la empresa
