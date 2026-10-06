@@ -25,25 +25,25 @@ spec:
             - name: LOG_PATH
               value: "/app/logs/api-gateway.log"
             - name: KEYCLOAK_ISSUER_URI
-              value: "http://localhost/auth/realms/hashimoto-realm"
+              value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm"
             - name: KEYCLOAK_JWK_SET_URI
-              value: "http://cluster.local"
+              value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm/protocol/openid-connect/certs"
 
-#          # 🩺 NUEVO: Sondas de salud automáticas para el Gateway (Puerto 8081)
-#          livenessProbe:
-#            httpGet:
-#              path: /actuator/health/liveness
-#              port: 8081
-#            initialDelaySeconds: 90 # Le da 30 segundos a Spring Boot para arrancar antes de empezar a medir
-#            periodSeconds: 15       # Revisa el corazón de la app cada 10 segundos\
-#            failureThreshold: 4     # Le permite fallar hasta 4 veces antes de matarlo
-#          readinessProbe:
-#            httpGet:
-#              path: /actuator/health/readiness
-#              port: 8081
-#            initialDelaySeconds: 90
-#            periodSeconds: 15
-#
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            failureThreshold: 4
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            failureThreshold: 4
+
           volumeMounts:
             - name: app-logs
               mountPath: /app/logs

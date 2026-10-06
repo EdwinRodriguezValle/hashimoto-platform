@@ -22,6 +22,14 @@ spec:
           # 👇 ACTUALIZADO: Añadimos el flag oficial de importación al comando de arranque
           command: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
           env:
+            # 🚀 PROXY FIX (Keycloak 24): Obliga a Keycloak a respetar el puerto 80 del Ingress de Nginx
+            - name: KC_PROXY
+              value: "edge"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: "admin"
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD

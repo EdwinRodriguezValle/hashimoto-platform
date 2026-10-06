@@ -21,7 +21,7 @@ spring:
 
   # Infraestructura unificada de Kafka en Docker
   kafka:
-    bootstrap-servers: kafka:29092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}
 
   # 🔐 Configuración base de Keycloak dentro de la red de Docker
   security:
@@ -50,7 +50,7 @@ axon:
     enabled: false
 
   kafka:
-    bootstrap-servers: kafka:29092
+    bootstrap-servers: ${AXON_KAFKA_BOOTSTRAP_SERVERS:${KAFKA_BOOTSTRAP_SERVERS:kafka:29092}}
     default-topic: patient-events
     producer:
       event-processor-mode: subscribing

@@ -25,25 +25,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // 💡 Si ya se inició la inicialización, nos saltamos el doble disparo de StrictMode
         if (isInitialized) return;
         isInitialized = true;
-        // Inicialización segura con PKCE
-        keycloak
-            .init({
-                onLoad: 'login-required',
-                checkLoginIframe: false,
-                pkceMethod: 'S256',
-            })
-            .then((authenticated) => {
+
+        const initializeKeycloak = async (attempt = 0) => {
+            const maxAttempts = 6;
+            try {
+                const authenticated = await keycloak.init({
+                    onLoad: 'check-sso',
+                    checkLoginIframe: false,
+                    pkceMethod: 'S256',
+                    silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+                });
+
                 setAuthInfo({
                     authenticated,
                     username: keycloak.tokenParsed?.preferred_username,
                     token: keycloak.token,
                 });
+
+                if (!authenticated) {
+                    console.info('Keycloak initialized, user not currently authenticated. Redirecting to login...');
+                    keycloak.login({ redirectUri: window.location.origin });
+                }
+
                 setIsReady(true);
-            })
-            .catch((err) => {
-                console.error('❌ Failed to initialize Keycloak:', err);
-                isInitialized = false; // Permitir reintento si falla radicalmente
-            });
+            } catch (err) {
+                if (attempt < maxAttempts) {
+                    const delayMs = 1000 * (attempt + 1);
+                    console.warn(`Keycloak not ready yet, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxAttempts})`, err);
+                    window.setTimeout(() => initializeKeycloak(attempt + 1), delayMs);
+                    return;
+                }
+
+                console.error('❌ Failed to initialize Keycloak after retries:', err);
+                isInitialized = false;
+                setAuthInfo({
+                    authenticated: false,
+                    username: undefined,
+                    token: undefined,
+                });
+                setIsReady(true);
+            }
+        };
+
+        initializeKeycloak();
     }, []);
 
     const logout = () => {
