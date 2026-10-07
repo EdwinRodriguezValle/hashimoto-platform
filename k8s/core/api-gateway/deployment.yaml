@@ -24,6 +24,8 @@ spec:
           env:
             - name: LOG_PATH
               value: "/app/logs/api-gateway.log"
+            - name: APP_SECURITY_DISABLED
+              value: "true"
             - name: KEYCLOAK_ISSUER_URI
               value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm"
             - name: KEYCLOAK_JWK_SET_URI

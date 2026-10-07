@@ -15,27 +15,8 @@ data:
             try_files $uri $uri/ /index.html;
         }
 
-        location /auth/ {
-            # Proxy Keycloak requests through the frontend so the browser sees same-origin
-            proxy_pass http://keycloak-bridge-service:8080/;
-
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-
-            proxy_http_version 1.1;
-            proxy_set_header Connection "";
-        }
-
-        # Ensure /auth without trailing slash redirects to the proxied path
-        location = /auth {
-            return 301 /auth/;
-        }
-
-        location /api {
-            return 404;
-        }
+        # TEMPORARY DEV BYPASS: Keycloak disabled while validating the cluster and app routing.
+        # The SPA is served directly; actual API routing goes through the Ingress at /api.
 
         error_page 500 502 503 504 /50x.html;
         location = /50x.html {

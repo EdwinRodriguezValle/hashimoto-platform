@@ -23,6 +23,8 @@ spec:
           env:
             - name: LOG_PATH
               value: "/app/logs/patient-service.log"
+            - name: APP_SECURITY_DISABLED
+              value: "true"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres-service.hashimoto-infra.svc.cluster.local:5432/hashimoto_db"
             - name: SPRING_DATASOURCE_USERNAME

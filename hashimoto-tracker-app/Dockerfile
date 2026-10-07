@@ -14,7 +14,7 @@ RUN rm -rf ./*
 COPY --from=builder /app/dist .
 
 # 🚀 CAMBIO 1: Copiamos tu archivo como una plantilla en lugar de la ruta definitiva
-COPY /nginx.conf /etc/nginx/templates/default.conf.template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Modificamos los permisos necesarios para el usuario NO-ROOT
 RUN touch /var/run/nginx.pid && \
