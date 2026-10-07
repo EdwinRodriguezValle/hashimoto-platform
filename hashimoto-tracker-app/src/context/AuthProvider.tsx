@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const maxAttempts = 6;
             try {
                 const authenticated = await keycloak.init({
-                    onLoad: 'check-sso',
+                    onLoad: 'login-required',
                     checkLoginIframe: false,
                     pkceMethod: 'S256',
                     silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
