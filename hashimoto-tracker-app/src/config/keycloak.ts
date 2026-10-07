@@ -1,11 +1,8 @@
 import Keycloak from 'keycloak-js';
 
-// 🚀 SOLUCIÓN: Calculamos la URL estrictamente según el puerto real en el que está el navegador del usuario.
-const isLocalDev = typeof window !== 'undefined' &&
-    (window.location.port === '5173' || window.location.port === '4173' || window.location.port === '3000');
-
-// Si el navegador está en el puerto 80 nativo de K8s, ignoramos cualquier .env viejo y forzamos /auth
-const KEYCLOAK_URL = isLocalDev ? 'http://localhost:8082' : `${window.location.origin}/auth`;
+// Hardcode para K8s en esta rama: el navegador debe usar la misma origin + /auth
+// para que nginx haga el proxy a Keycloak y se evite el CORS.
+const KEYCLOAK_URL = `${window.location.origin}/auth`;
 
 const keycloakConfig = {
     url: KEYCLOAK_URL,
