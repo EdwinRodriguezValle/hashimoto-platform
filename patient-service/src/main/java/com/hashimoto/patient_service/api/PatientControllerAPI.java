@@ -27,7 +27,7 @@ public class PatientControllerAPI {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_ADMIN')") // <-- 2. PROTEGEMOS EL ENDPOINT PARA SOLO ADMIN
+//    @PreAuthorize("hasRole('ROLE_ADMIN')") // <-- 2. PROTEGEMOS EL ENDPOINT PARA SOLO ADMIN
     public CompletableFuture<String> createPatient(@RequestBody CreatePatientRequest request) {
 
         // Aquí puedes generar un UUID único para el paciente

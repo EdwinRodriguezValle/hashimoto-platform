@@ -11,6 +11,9 @@ interface AuthContextType {
 }
 let isInitialized = false;
 
+// TEMPORARY DEV BYPASS: set VITE_AUTH_BYPASS=false to restore Keycloak later.
+const DEV_AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS !== 'false';
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -22,6 +25,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     useEffect(() => {
+        // TEMPORARY DEV BYPASS: removes the auth stall while Keycloak is unstable.
+        if (DEV_AUTH_BYPASS) {
+            setAuthInfo({
+                authenticated: true,
+                username: 'dev-user',
+                token: 'temporary-dev-token',
+            });
+            setIsReady(true);
+            return;
+        }
+
         // 💡 Si ya se inició la inicialización, nos saltamos el doble disparo de StrictMode
         if (isInitialized) return;
         isInitialized = true;
@@ -71,6 +85,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const logout = () => {
+        if (DEV_AUTH_BYPASS) {
+            setAuthInfo({
+                authenticated: true,
+                username: 'dev-user',
+                token: 'temporary-dev-token',
+            });
+            return;
+        }
+
         keycloak.logout({ redirectUri: window.location.origin });
     };
 

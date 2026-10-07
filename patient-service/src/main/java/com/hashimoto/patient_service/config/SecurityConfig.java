@@ -18,6 +18,10 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity // 👈 Habilita el uso de @PreAuthorize en tus controladores o servicios
 public class SecurityConfig {
 
+    // TEMPORARY DEV BYPASS: set app.security.disabled=false to restore Keycloak later.
+    @Value("${app.security.disabled:true}")
+    private boolean securityDisabled;
+
     // Inyectamos la URL de los certificados de Keycloak en vez del emisor
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
@@ -31,6 +35,16 @@ public class SecurityConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        if (this.securityDisabled) {
+            // TEMPORARY DEV BYPASS: removes Keycloak from local debugging while the platform is being validated.
+            http
+                    .csrf(csrf -> csrf.disable())
+                    .authorizeHttpRequests(auth -> auth
+                            .anyRequest().permitAll()
+                    );
+            return http.build();
+        }
+
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
