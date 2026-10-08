@@ -158,6 +158,7 @@ services:
       - "8080:8080"
     environment:
       - LOG_PATH=${LOG_PATH_PATIENT} # 👈 Inyección dinámica limpia
+      - APP_LOCAL_FAST_MODE=true
     depends_on:
       postgres:
         condition: service_healthy

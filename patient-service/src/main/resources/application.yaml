@@ -1,3 +1,7 @@
+app:
+  local:
+    fast-mode: ${APP_LOCAL_FAST_MODE:false}
+
 spring:
   application:
     name: patient-service
