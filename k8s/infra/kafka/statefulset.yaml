@@ -1,4 +1,5 @@
-# El Orquestador y Red: Traduce exactamente toda la lógica de variables de red y clúster que tenías en Docker al entorno nativo de Kubernetes:
+# OPTIMIZACIÓN KUBERNETES: Kafka debe ir con StatefulSet + PVC real y recursos suficientes para no saturar red y disco.
+# También dejamos más particiones por defecto para evitar que todo viaje por la misma partición.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -18,6 +19,13 @@ spec:
       containers:
         - name: kafka
           image: confluentinc/cp-kafka:7.5.0
+          resources:
+            requests:
+              cpu: "750m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "3Gi"
           env:
             - name: KAFKA_NODE_ID
               value: "1"
@@ -27,6 +35,10 @@ spec:
               value: 'PLAINTEXT://kafka-service:9092,PLAINTEXT_HOST://localhost:29092'
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
+            - name: KAFKA_DEFAULT_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_NUM_PARTITIONS
+              value: "3"
             - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
               value: "0"
             - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
@@ -45,6 +57,12 @@ spec:
               value: 'CONTROLLER'
             - name: KAFKA_LOG_DIRS
               value: '/tmp/kraft-combined-logs'
+            - name: KAFKA_MESSAGE_MAX_BYTES
+              value: '10485760'
+            - name: KAFKA_REPLICA_FETCH_MAX_BYTES
+              value: '10485760'
+            - name: KAFKA_COMPRESSION_TYPE
+              value: 'producer'
             - name: CLUSTER_ID
               value: 'MkU3OEVBNTcwNTJENDM2Qk'
           ports:

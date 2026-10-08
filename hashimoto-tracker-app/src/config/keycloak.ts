@@ -2,10 +2,10 @@ import Keycloak from 'keycloak-js';
 
 // Hardcode para K8s en esta rama: el navegador debe usar la misma origin + /auth
 // para que nginx haga el proxy a Keycloak y se evite el CORS.
-const KEYCLOAK_URL = `${window.location.origin}/auth`;
+const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL || `${window.location.origin}/auth`;
 
 const keycloakConfig = {
-    url: KEYCLOAK_URL,
+    url: keycloakUrl,
     realm: 'hashimoto-realm',
     clientId: 'hashimoto-tracker-web',
 };

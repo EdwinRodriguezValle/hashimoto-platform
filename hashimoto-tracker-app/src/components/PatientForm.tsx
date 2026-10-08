@@ -21,7 +21,13 @@ export const PatientForm: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!token) return;
+        // 🔍 DIAGNÓSTICO CLAVE
+        console.log("Token actual en el formulario:", token);
+
+        if (!token) {
+            setMessage('❌ Error: No hay un token de Keycloak activo. Inicia sesión nuevamente.');
+            return;
+        }
 
         setLoading(true);
         setMessage('');
@@ -130,10 +136,10 @@ export const PatientForm: React.FC = () => {
 
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !token}
                     style={{ padding: '10px', backgroundColor: '#0288d1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}
                 >
-                    {loading ? 'Transmitting Data...' : 'Register Patient'}
+                    {!token ? 'Waiting for Keycloak Token...' : (loading ? 'Transmitting Data...' : 'Register Patient')}
                 </button>
             </form>
 

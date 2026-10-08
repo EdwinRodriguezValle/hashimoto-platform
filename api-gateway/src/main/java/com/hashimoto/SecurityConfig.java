@@ -17,8 +17,8 @@ import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder; // 🚀 Reque
 public class SecurityConfig {
 
     // TEMPORARY DEV BYPASS: set app.security.disabled=false to restore Keycloak later.
-    @Value("${app.security.disabled:true}")
-    private boolean securityDisabled;
+    // @Value("${app.security.disabled:true}")
+//    private boolean securityDisabled;
 
     // Inyectamos la URL interna leída desde tu platform-env.yaml de K8s
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
@@ -33,15 +33,15 @@ public class SecurityConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE) // 👈 Forzar a que esta regla se evalúe de primero
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
-        if (this.securityDisabled) {
-            // TEMPORARY DEV BYPASS: removes Keycloak from the local path while debugging the platform.
-            http
-                    .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                    .authorizeExchange(exchanges -> exchanges
-                            .pathMatchers("/**").permitAll()
-                    );
-            return http.build();
-        }
+//        if (this.securityDisabled) {
+//            // TEMPORARY DEV BYPASS: removes Keycloak from the local path while debugging the platform.
+//            http
+//                    .csrf(ServerHttpSecurity.CsrfSpec::disable)
+//                    .authorizeExchange(exchanges -> exchanges
+//                            .pathMatchers("/**").permitAll()
+//                    );
+//            return http.build();
+//        }
 
         http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -54,7 +54,7 @@ public class SecurityConfig {
                         .jwt(jwt -> jwt.jwtDecoder(reactiveJwtDecoder()))
                 );
 
-//                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
+//               .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
 
         return http.build();
     }

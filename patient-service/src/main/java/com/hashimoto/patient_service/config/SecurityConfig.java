@@ -19,8 +19,8 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     // TEMPORARY DEV BYPASS: set app.security.disabled=false to restore Keycloak later.
-    @Value("${app.security.disabled:true}")
-    private boolean securityDisabled;
+    //@Value("${app.security.disabled:true}")
+//    private boolean securityDisabled;
 
     // Inyectamos la URL de los certificados de Keycloak en vez del emisor
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
@@ -35,15 +35,15 @@ public class SecurityConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        if (this.securityDisabled) {
-            // TEMPORARY DEV BYPASS: removes Keycloak from local debugging while the platform is being validated.
-            http
-                    .csrf(csrf -> csrf.disable())
-                    .authorizeHttpRequests(auth -> auth
-                            .anyRequest().permitAll()
-                    );
-            return http.build();
-        }
+//        if (this.securityDisabled) {
+//            // TEMPORARY DEV BYPASS: removes Keycloak from local debugging while the platform is being validated.
+//            http
+//                    .csrf(csrf -> csrf.disable())
+//                    .authorizeHttpRequests(auth -> auth
+//                            .anyRequest().permitAll()
+//                    );
+//            return http.build();
+//        }
 
         http
                 .csrf(csrf -> csrf.disable())

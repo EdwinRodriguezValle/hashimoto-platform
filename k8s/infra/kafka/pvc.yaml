@@ -1,4 +1,4 @@
-# Sirve para reservar 10 Gigabytes para que Kafka guarde sus bitácoras de logs combinadas (/tmp/kraft-combined-logs) de manera persistente.
+# OPTIMIZACIÓN KUBERNETES: Kafka debe correr como StatefulSet con PVC real para mantener logs y offsets en almacenamiento persistente y evitar latencia por I/O degradada.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

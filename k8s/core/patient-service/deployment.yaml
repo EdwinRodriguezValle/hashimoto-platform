@@ -1,4 +1,4 @@
-# Configurará un pod ejecutable apuntando a una imagen local llamada hashimoto/patient-service:latest.
+# OPTIMIZACIÓN KUBERNETES: para acelerar el servicio en cluster, subimos memoria/CPU, ajustamos probes para arrancar Axon/Spring y activamos JVM con G1GC + soporte a contenedores.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,7 +24,9 @@ spec:
             - name: LOG_PATH
               value: "/app/logs/patient-service.log"
             - name: APP_SECURITY_DISABLED
-              value: "true"
+              value: "false"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseContainerSupport -XX:+UseG1GC -Xms512m -Xmx1g"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgres-service.hashimoto-infra.svc.cluster.local:5432/hashimoto_db"
             - name: SPRING_DATASOURCE_USERNAME
@@ -47,21 +49,27 @@ spec:
               value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm/protocol/openid-connect/certs"
             - name: KEYCLOAK_AUTH_SERVER_URL
               value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080"
-
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "768Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1.5Gi"
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 90
-            periodSeconds: 15
-            failureThreshold: 4
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 6
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 90
-            periodSeconds: 15
-            failureThreshold: 4
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 6
 
           volumeMounts:
             - name: app-logs
