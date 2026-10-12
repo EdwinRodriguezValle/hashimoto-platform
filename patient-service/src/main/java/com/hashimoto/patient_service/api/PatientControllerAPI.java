@@ -27,7 +27,7 @@ public class PatientControllerAPI {
     }
 
     @PostMapping
-   // @PreAuthorize("hasRole('ROLE_ADMIN')") // <-- 2. PROTEGEMOS EL ENDPOINT PARA SOLO ADMIN
+    @PreAuthorize("hasRole('PATIENT_WRITE')")
     public CompletableFuture<String> createPatient(@RequestBody CreatePatientRequest request) {
         String patientId = java.util.UUID.randomUUID().toString();
 
@@ -45,6 +45,7 @@ public class PatientControllerAPI {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('PATIENT_READ')")
     public CompletableFuture<List<PatientView>> getAllPatients() {
         return queryGateway.query(
                 new FindAllPatientsQuery(),

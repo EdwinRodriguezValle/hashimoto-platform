@@ -95,6 +95,20 @@
         "attributes": {}
       },
       {
+        "name": "patient-read",
+        "description": "Allows reading patient records",
+        "composite": false,
+        "clientRole": false,
+        "attributes": {}
+      },
+      {
+        "name": "patient-write",
+        "description": "Allows creating patient records",
+        "composite": false,
+        "clientRole": false,
+        "attributes": {}
+      },
+      {
         "id": "c702abe2-bcad-4821-af86-2287cd1a95f0",
         "name": "uma_authorization",
         "description": "${role_uma_authorization}",

@@ -23,13 +23,12 @@ En Kubernetes, el nombre `hashimoto.local` debe apuntar a `127.0.0.1` en el arch
 
 ## 2. Crear permisos para el ejemplo
 
-El realm actual no define roles de negocio propios. Vamos a crear dos roles de realm desde la consola como configuración de aprendizaje:
+El realm fuente declara los roles de negocio `patient-read` y `patient-write`. En una instalación nueva los crea la importación. Si el realm ya existía antes de añadirlos al JSON, `--import-realm` no los agregará: créalos una vez desde **Realm roles** o realiza una importación de actualización deliberada.
 
-1. Abre **Realm roles** y crea `patient-read` y `patient-write`.
-2. Abre **Groups** y crea el grupo `patient-clerks`.
-3. Dentro del grupo, abre **Role mapping**, elige **Assign role** y asigna `patient-read` y `patient-write`.
+1. Abre **Groups** y crea el grupo `patient-clerks`.
+2. Dentro del grupo, abre **Role mapping**, elige **Assign role** y asigna `patient-read` y `patient-write`.
 
-Asignar roles al grupo facilita dar a sus miembros los mismos permisos sin configurar cada cuenta por separado. En este primer ejercicio el realm guarda esos cambios en `keycloak_db`, pero aún no están declarados en el JSON versionado.
+Asignar roles al grupo facilita dar a sus miembros los mismos permisos sin configurar cada cuenta por separado. La definición de roles está versionada con el realm; la pertenencia de usuarios al grupo se guarda en `keycloak_db`.
 
 ## 3. Crear un usuario y añadirlo al grupo
 
@@ -53,9 +52,9 @@ Para inspeccionar el payload localmente, puedes copiar el access token solo en t
 
 ## 5. Qué autorización hace hoy la aplicación
 
-Actualmente Gateway y Patient Service exigen un token válido para las rutas protegidas. Patient Service convierte `realm_access.roles` en autoridades de Spring, pero los endpoints de pacientes todavía no aplican una regla `hasRole`/`@PreAuthorize`. Por eso, en el estado actual, ambos roles aparecerán en el token, pero **no restringen** quién puede leer o crear pacientes: cualquier usuario autenticado puede invocar esas rutas.
+Gateway exige un token válido para las rutas protegidas. Patient Service valida el token y convierte los roles de `realm_access.roles` a autoridades de Spring (por ejemplo, `patient-read` pasa a `ROLE_PATIENT_READ`). El controlador aplica `PATIENT_READ` a `GET /api/patients` y `PATIENT_WRITE` a `POST /api/patients` mediante `@PreAuthorize`.
 
-Es una diferencia deliberada entre autenticación (quién eres) y autorización (qué puedes hacer). El siguiente paso de seguridad debe ser decidir y aplicar la política, por ejemplo `patient-read` para `GET /api/patients` y `patient-write` para `POST /api/patients`, comprobando también el formato de autoridad que mapea el conversor de roles.
+Es una diferencia entre autenticación (quién eres) y autorización (qué puedes hacer): cualquier usuario con token válido puede pasar Gateway, pero solo quien tenga el rol correspondiente puede ejecutar cada operación en Patient Service. Un usuario autenticado sin el rol debería recibir `403 Forbidden` del servicio. Tras asignar roles, inicia una sesión nueva para obtener un token con las asignaciones actualizadas; los roles van dentro del access token.
 
 ## 6. Datos persistentes e importación
 
@@ -68,5 +67,5 @@ Para reiniciar el ejercicio, elimina el usuario o grupo desde la consola. No eli
 - **No puedes iniciar sesión:** confirma que el usuario está habilitado, que la contraseña no está pendiente de cambio y que elegiste el realm `hashimoto-realm`.
 - **HTTP 401:** token ausente, vencido o issuer no coincidente. Revisa el issuer del entorno en `docs/keycloak.md` y los logs de Gateway/Patient Service.
 - **No aparecen roles en el token:** revisa la asignación del grupo al usuario y de roles al grupo; asegúrate de inspeccionar el access token del cliente web.
-- **HTTP 403:** suele indicar que el token fue aceptado pero una política de autorización lo rechazó. Los endpoints actuales no aplican todavía autorización por roles.
+- **HTTP 403:** el token es válido, pero le falta `patient-read` para GET o `patient-write` para POST; revisa asignación de roles y vuelve a iniciar sesión para obtener un token actualizado.
 

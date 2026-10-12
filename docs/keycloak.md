@@ -6,7 +6,7 @@ Keycloak proporciona inicio de sesión y emite los tokens de acceso que usan la 
 
 ## Una definición del realm para todos los entornos
 
-La fuente versionada del realm es [`k8s/infra/keycloak/hashimoto-realm-realm.json`](../k8s/infra/keycloak/hashimoto-realm-realm.json). Contiene el realm `hashimoto-realm`, clientes, scopes y sus URI permitidas. El cliente web permite explícitamente las direcciones de desarrollo para `localhost:5173`, `127.0.0.1:5173` y `hashimoto.local:8085`; no utiliza un origen comodín. Sus `rootUrl`, `adminUrl` y `baseUrl` quedan vacíos para que el mismo archivo no dependa de un host concreto.
+La fuente versionada del realm es [`k8s/infra/keycloak/hashimoto-realm-realm.json`](../k8s/infra/keycloak/hashimoto-realm-realm.json). Contiene el realm `hashimoto-realm`, clientes, scopes, los roles de negocio `patient-read`/`patient-write` y las URI permitidas. El cliente web permite explícitamente las direcciones de desarrollo para `localhost:5173`, `127.0.0.1:5173` y `hashimoto.local:8085`; no utiliza un origen comodín. Sus `rootUrl`, `adminUrl` y `baseUrl` quedan vacíos para que el mismo archivo no dependa de un host concreto.
 
 Compose monta ese JSON directamente en `/opt/keycloak/data/import/hashimoto-realm-realm.json`. Kubernetes genera el ConfigMap desde el mismo archivo mediante [`k8s/infra/keycloak/kustomization.yaml`](../k8s/infra/keycloak/kustomization.yaml), y el Deployment monta su contenido en el directorio de importación de Keycloak. El nombre del archivo sigue el formato `<realm>-realm.json` que Keycloak reconoce al importar desde ese directorio.
 

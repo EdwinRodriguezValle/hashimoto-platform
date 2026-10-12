@@ -47,6 +47,8 @@ PostgreSQL es una instancia compartida en desarrollo, con una base por servicio:
 
 Keycloak publica un issuer fijo por escenario; Spring valida la firma usando una URL JWKS alcanzable desde la red de cada backend y comprueba explícitamente el claim `iss`. En Compose el issuer público es `http://localhost:8082/realms/hashimoto-realm`, aunque los contenedores descargan las claves desde `keycloak:8080`. En Kubernetes el navegador usa `http://hashimoto.local:8085/auth`, mientras los pods usan el DNS interno de `keycloak-service` para descargar las claves. En el modo híbrido, los procesos locales usan `localhost:8082` para ambos valores.
 
+Patient Service aplica autorización por rol de realm: `patient-read` permite `GET /api/patients` y `patient-write` permite `POST /api/patients`. Los roles se asignan a grupos/usuarios en Keycloak y llegan en `realm_access.roles`; el conversor los mapea a autoridades de Spring.
+
 El hostname de Keycloak no se infiere de cualquier cabecera entrante: la imagen fijada es Keycloak 24 y Compose/Kubernetes fijan `KC_HOSTNAME_URL`; Kubernetes además sirve su contexto bajo `/auth` y confía en `X-Forwarded-*` del Ingress. El cliente `hashimoto-tracker-web` permite solo los orígenes locales explícitos configurados para Vite/Compose y Kubernetes; no usa origen comodín. Al actualizar Keycloak, revisa la migración de configuración de hostname correspondiente a la nueva versión.
 
 ## Componentes
