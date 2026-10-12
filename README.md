@@ -214,12 +214,12 @@ parsers:
       match: after
 ```
 
-## 11. Database Initialization (The Keycloak Trap)
-The official PostgreSQL Docker image **only creates one database** automatically via `POSTGRES_DB: patient_db`.
-Because Keycloak requires its own isolated database (`keycloak_db`), this repository mounts a bootstrap script:
+## 11. PostgreSQL databases
+The local PostgreSQL instance hosts one database per service: `patient_db` for Patient Service (including Axon and its read projection), and `keycloak_db` for Keycloak. `POSTGRES_DB` creates `patient_db`; the initialization script creates `keycloak_db`:
 
 - **Location**: `./init-scripts/init.sql`
-- **Action**: Runs automatically on the first container startup to verify and execute `CREATE DATABASE keycloak_db;`. 
+- **Action**: Runs automatically on the first startup of an empty PostgreSQL data volume and executes `CREATE DATABASE keycloak_db;`.
+- **Important**: Initialization scripts do not run again when a volume already contains a database. Changing this script does not migrate existing volumes.
 
 ## How start all 
 

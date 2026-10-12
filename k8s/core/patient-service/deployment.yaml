@@ -28,7 +28,7 @@ spec:
             - name: JAVA_TOOL_OPTIONS
               value: "-XX:+UseContainerSupport -XX:+UseG1GC -Xms512m -Xmx1g"
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres-service.hashimoto-infra.svc.cluster.local:5432/hashimoto_db"
+              value: "jdbc:postgresql://postgres-service.hashimoto-infra.svc.cluster.local:5432/patient_db"
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:

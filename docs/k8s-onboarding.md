@@ -58,6 +58,8 @@ kubectl apply -f k8s/core/platform-env.yaml
 
 Los Secrets actuales contienen contraseñas de desarrollo (`123` y `admin`) versionadas en YAML. No uses esos valores fuera de la máquina local. En un entorno compartido, reemplázalos por un mecanismo de secretos apropiado antes de aplicar.
 
+PostgreSQL crea `patient_db` como base inicial y el script de inicialización crea `keycloak_db`. El Patient Service (incluido Axon) usa `patient_db`; Keycloak usa `keycloak_db`. PostgreSQL solo ejecuta esos scripts cuando el directorio de datos está vacío. Si reutilizas un volumen existente, cambiar `POSTGRES_DB` o el SQL no renombra ni crea bases automáticamente: haz una migración explícita o inicia con un volumen nuevo si no necesitas conservar sus datos.
+
 ## 4. Construir e importar imágenes
 
 El clúster K3d no usa automáticamente las imágenes locales de Docker. El Makefile construye las tres imágenes y las importa a los nodos K3d:
@@ -127,7 +129,6 @@ Detener el clúster conserva su configuración y almacenamiento local. `k3d clus
 Los manifiestos actuales tienen discrepancias que pueden impedir que todo quede listo:
 
 - Debe aplicarse `k8s/infra/platform-env.yaml` antes de Postgres y Keycloak; el target de Makefile no lo aplica.
-- El SQL crea `keycloak_db`, pero Keycloak está configurado con `hashimoto_db`.
 - Los Ingress usan clase Traefik, mientras que una receta antigua del README raíz desactiva Traefik e intenta descargar una definición Nginx desde una URL inválida/no versionada. Decide qué controlador usar y deja una única instalación reproducible.
 - La ruta `/auth` tiene un backend DNS entre namespaces; el Service puente existente no está referenciado por el Ingress.
 - Filebeat apunta a `http://cluster.local`, no al Service de Elasticsearch.

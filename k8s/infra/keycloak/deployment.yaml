@@ -47,7 +47,7 @@ spec:
             - name: KC_DB
               value: "postgres"
             - name: KC_DB_URL
-              value: "jdbc:postgresql://postgres-service:5432/hashimoto_db"
+              value: "jdbc:postgresql://postgres-service:5432/keycloak_db"
             - name: KC_DB_USERNAME
               valueFrom:
                 configMapKeyRef:
