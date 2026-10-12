@@ -68,6 +68,10 @@ El realm tiene una sola fuente JSON compartida con Compose; Kustomize genera el 
 
 PostgreSQL, Kafka, Prometheus, Grafana y Elasticsearch declaran PVC. La clase `local-path` de K3s crea almacenamiento local asociado al clúster/nodo. No equivale a respaldo: eliminar el clúster puede eliminar los datos. Haz copias de seguridad fuera del clúster si necesitas conservarlos.
 
+### Conexión de Kafka entre namespaces
+
+Patient Service usa `kafka-service.hashimoto-infra.svc.cluster.local:9092` como bootstrap para Spring Kafka y Axon. El bootstrap solo inicia la conexión: después Kafka entrega al cliente las direcciones de broker configuradas en `KAFKA_ADVERTISED_LISTENERS`. Por eso el listener interno anuncia el DNS completo de `kafka-service` en `hashimoto-infra`, que puede resolverse desde `hashimoto-core`; no se debe anunciar `kafka-service:9092`, que depende del namespace de origen del cliente. Compose conserva sus listeners propios (`kafka:29092` para contenedores y `localhost:9092` para procesos en el host).
+
 El modo de desarrollo usa `start-dev` en Keycloak, imágenes `latest` para servicios propios, contraseñas en texto claro en manifiestos, Elastic sin seguridad y recursos limitados/no uniformes. No expongas este clúster a una red pública ni reutilices estas credenciales.
 
 ## Observaciones para un despliegue reproducible

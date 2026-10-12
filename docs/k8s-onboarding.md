@@ -76,6 +76,8 @@ La aplicación web usa una ruta relativa `/auth`: Vite la proxifica en modo IDE,
 
 Los archivos de realm versionados son configuración inicial. `--import-realm` omite un realm si ya existe en la base de Keycloak; en una base persistente, editar el JSON no sincroniza ni sobrescribe la configuración existente. Para esa situación, cambia el cliente desde la consola/API de administración o planifica una importación offline explícita y respaldada. No borres volúmenes para forzar la importación si contienen datos que quieras conservar.
 
+Kafka anuncia a los clientes el DNS interno `kafka-service.hashimoto-infra.svc.cluster.local:9092`. El cliente usa ese nombre tras el bootstrap, así que cualquier servicio en otro namespace debe conectarse a un hostname anunciado que pueda resolver desde su propia red.
+
 ## 4. Construir e importar imágenes
 
 El clúster K3d no usa automáticamente las imágenes locales de Docker. El Makefile construye las tres imágenes y las importa a los nodos K3d:

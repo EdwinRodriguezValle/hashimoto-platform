@@ -32,7 +32,7 @@ spec:
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
             - name: KAFKA_ADVERTISED_LISTENERS
-              value: 'PLAINTEXT://kafka-service:9092,PLAINTEXT_HOST://localhost:29092'
+              value: 'PLAINTEXT://kafka-service.hashimoto-infra.svc.cluster.local:9092,PLAINTEXT_HOST://localhost:29092'
             - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
               value: "1"
             - name: KAFKA_DEFAULT_REPLICATION_FACTOR
