@@ -20,7 +20,7 @@ For the Keycloak setup across hybrid local development, Compose, and Kubernetes,
 The platform is composed of several services:
 
 - **Frontend**: React app served by Vite in local development and by Nginx in Docker.
-- **API Gateway**: Spring Cloud Gateway, used as the main entry point for backend requests. Handles Token Relay.
+- **API Gateway**: Spring Cloud Gateway, used as the main entry point for backend requests. Validates access-token signature, issuer, and API audience before routing.
 - **Patient Service**: Main business service built with Axon Framework for event-driven patient creation and retrieval.
 - **Keycloak**: IAM and user authentication provider.
 - **PostgreSQL**: Relational database providing persistence for both Keycloak and the Patient Service.
@@ -36,8 +36,8 @@ The application works as follows:
 - The user accesses the frontend at `http://localhost:5173`.
 - The frontend authenticates against **Keycloak** (`http://localhost:8082`) using PKCE.
 - The frontend sends requests containing the Bearer Token to the gateway at `http://localhost:8081`.
-- The gateway routes requests to the **Patient Service** (`http://localhost:8080`) and automatically relays the token.
-- The Patient Service validates the JWT tokens via an optimized lazy `JwtDecoder` process.
+- The gateway forwards the incoming `Authorization: Bearer` header to **Patient Service** (`http://localhost:8080`).
+- Both the gateway and Patient Service validate the JWT signature, issuer, and `api-gateway-client` audience; Patient Service also enforces the patient roles.
 - **PostgreSQL** stores patient entities and Axon event stores.
 - **Kafka** handles distributed events.
 - **Prometheus** scrapes metrics from Spring Actuator endpoints.
@@ -89,6 +89,16 @@ docker compose up -d --build frontend api-gateway patient-service
 
 This is the recommended workflow when you are actively coding the Java microservices and want them to run from your IDE or terminal while the backing infrastructure stays in Docker.
 
+The backend services require **JDK 21**. If you use SDKMAN and have multiple Java versions installed, select the project version in each terminal before starting Maven:
+
+```bash
+sdk use java 21.0.9-tem
+java -version
+mvn -version
+```
+
+Both version commands should report Java 21. This only changes Java for the current terminal; repeat it in each terminal where you start a Java service. If that SDKMAN version is not installed, run `sdk install java 21.0.9-tem` once.
+
 1. **Start the Infrastructure Containers:**
    ```bash
    docker compose up -d postgres kafka keycloak elasticsearch kibana filebeat prometheus grafana
@@ -127,6 +137,8 @@ The dev server proxies `/api` to `http://localhost:8081` (API Gateway) and `/aut
 ## 7. Local Development vs. Docker Profile Strategy
 
 The architecture separates environment properties using Spring Profiles and environment variables. Keep the token issuer stable within each environment; configure the JWKS address separately so each backend uses an address reachable from its own network.
+
+Both backends also require `API_AUDIENCE=api-gateway-client`. Keycloak adds that audience to access tokens issued to `hashimoto-tracker-web`. After changing the Keycloak mapper, sign out and back in to receive a token with the updated `aud` claim.
 
 ### Local Profile (`application-local.yml`)
 When running from your host machine/IDE:
