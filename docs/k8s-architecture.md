@@ -1,21 +1,21 @@
-# Arquitectura Kubernetes de Hashimoto Platform
+# Hashimoto Platform Kubernetes architecture
 
-## Alcance
+## Scope
 
-Este documento describe lo que los manifiestos de `k8s/` definen hoy. Es una instalación de desarrollo local sobre K3d/K3s, no una arquitectura de producción: usa credenciales de ejemplo, réplicas únicas, almacenamiento `local-path` y varios servicios sin endurecimiento de seguridad.
+This document describes the current resources under `k8s/`. They define a local development deployment on K3d/K3s, not a production architecture: the platform uses development credentials, single replicas, `local-path` storage, and several components without production hardening.
 
-Los diagramas anteriores en `docs/Architecture.md` y `docs/HashimotoArchitecureKubernetes.md` incluyen componentes futuros (varios microservicios, Argo CD, móviles, etc.). No forman parte del despliegue Kubernetes actual.
+Older diagrams in `docs/Architecture.md` and `docs/HashimotoArchitecureKubernetes.md` include future components such as additional microservices, Argo CD, and mobile applications. They are not part of the current Kubernetes deployment.
 
-## Vista general
+## Overview
 
 ```mermaid
 flowchart LR
-  Browser[ Navegador ] -->|HTTP, puerto publicado del host| Edge[Load balancer K3d]
-  Edge --> Router[Traefik de K3s, si sigue habilitado]
+  Browser[Browser] -->|HTTP through published host port| Edge[K3d load balancer]
+  Edge --> Router[Traefik in K3s]
   Router -->|/| Frontend[frontend-service\nnamespace hashimoto-core]
   Router -->|/api| Gateway[api-gateway\nnamespace hashimoto-core]
-  Router -.->|/auth, ruta declarada| IdP[Keycloak\nnamespace hashimoto-infra]
-  Frontend -->|API y autenticación desde navegador| Gateway
+  Router -.->|/auth, declared route| IdP[Keycloak\nnamespace hashimoto-infra]
+  Frontend -->|API and authentication from browser| Gateway
   Gateway --> Patient[patient-service\nnamespace hashimoto-core]
   Patient --> DB[(PostgreSQL\nnamespace hashimoto-infra)]
   Patient --> Kafka[Kafka KRaft\nnamespace hashimoto-infra]
@@ -28,54 +28,62 @@ flowchart LR
   Kibana[Kibana\nnamespace hashimoto-logs] --> ES
 ```
 
-La presencia de una flecha representa intención/configuración; los probes de disponibilidad y las comprobaciones del onboarding verifican que los servicios estén listos.
+Arrows show configured intent. Readiness probes and the onboarding checks verify that services are ready.
 
-## Namespaces y responsabilidades
+## Namespaces and responsibilities
 
-| Namespace | Responsabilidad | Recursos principales |
+| Namespace | Responsibility | Main resources |
 | --- | --- | --- |
-| `hashimoto-core` | Cargas de negocio y configuración de aplicación | Frontend, API Gateway, Patient Service, Ingress |
-| `hashimoto-infra` | Persistencia, mensajería e identidad | PostgreSQL, Kafka, Keycloak |
-| `hashimoto-ops` | Métricas | Prometheus y Grafana |
-| `hashimoto-logs` | Recolección y búsqueda de registros | Filebeat, Elasticsearch y Kibana |
+| `hashimoto-core` | Business workloads and application configuration | Frontend, API Gateway, Patient Service, Ingress |
+| `hashimoto-infra` | Persistence, messaging, and identity | PostgreSQL, Kafka, Keycloak |
+| `hashimoto-ops` | Metrics | Prometheus and Grafana |
+| `hashimoto-logs` | Log collection and search | Filebeat, Elasticsearch, and Kibana |
 
-Los namespaces aíslan nombres y políticas de recursos; no crean por sí solos una barrera de red. Las comunicaciones internas usan Services DNS, por ejemplo `postgres-service.hashimoto-infra.svc.cluster.local:5432`.
+Namespaces separate resource names and policies; they do not create a network security boundary on their own. Internal communication uses Kubernetes Service DNS, for example `postgres-service.hashimoto-infra.svc.cluster.local:5432`.
 
-PostgreSQL es una instancia compartida en desarrollo, con una base por servicio: `patient_db` para Patient Service (incluidos Axon y su proyección) y `keycloak_db` para Keycloak. Los nombres se mantienen iguales en Compose, ejecución local y Kubernetes. Ambos usan hoy el usuario PostgreSQL de desarrollo común; separar credenciales/permisos es una mejora posterior.
+PostgreSQL is a shared development instance with one database per service: `patient_db` for Patient Service (including Axon and its read projection) and `keycloak_db` for Keycloak. The database names are consistent across Compose, local processes, and Kubernetes. Both databases currently use the shared development PostgreSQL account; separate credentials and grants are a later improvement.
 
-### Identidad y validación de tokens
+## Identity and token validation
 
-Keycloak publica un issuer fijo por escenario; Spring valida la firma usando una URL JWKS alcanzable desde la red de cada backend y comprueba explícitamente el claim `iss`. En Compose el issuer público es `http://localhost:8082/realms/hashimoto-realm`, aunque los contenedores descargan las claves desde `keycloak:8080`. En Kubernetes el navegador usa `http://localhost:8085/auth`, mientras los pods usan el DNS interno de `keycloak-service` para descargar las claves. En el modo híbrido, los procesos locales usan `localhost:8082` para ambos valores.
+Keycloak publishes a fixed issuer for each runtime mode. Spring validates the token signature using a JWKS URL reachable from each backend's network and explicitly checks the `iss` claim. In Compose, the public issuer is `http://localhost:8082/realms/hashimoto-realm`, while containers fetch signing keys from `keycloak:8080`. In Kubernetes, the browser-facing issuer is `http://localhost:8085/auth/realms/hashimoto-realm`, while pods retrieve signing keys through the internal `keycloak-service` DNS name. In hybrid mode, Java processes on the host use `localhost:8082` for both issuer and JWKS.
 
-Patient Service aplica autorización por rol de realm: `patient-read` permite `GET /api/patients` y `patient-write` permite `POST /api/patients`. Los roles se asignan a grupos/usuarios en Keycloak y llegan en `realm_access.roles`; el conversor los mapea a autoridades de Spring.
+Patient Service authorizes operations using realm roles: `patient-read` permits `GET /api/patients`, and `patient-write` permits `POST /api/patients`. Roles are assigned to groups or users in Keycloak and appear in `realm_access.roles`; the Spring converter maps them to Spring authorities.
 
-El hostname de Keycloak no se infiere de cualquier cabecera entrante: la imagen fijada es Keycloak 24 y Compose/Kubernetes fijan `KC_HOSTNAME_URL`; Kubernetes además sirve su contexto bajo `/auth` y confía en `X-Forwarded-*` del Ingress. El cliente `hashimoto-tracker-web` permite solo los orígenes locales explícitos configurados para Vite/Compose y Kubernetes; no usa origen comodín. Al actualizar Keycloak, revisa la migración de configuración de hostname correspondiente a la nueva versión.
+The Keycloak hostname is not inferred from arbitrary incoming headers. The image is pinned to Keycloak 24, and Compose/Kubernetes set `KC_HOSTNAME_URL`. Kubernetes also serves Keycloak under `/auth` and trusts the Ingress `X-Forwarded-*` headers. The `hashimoto-tracker-web` client allows only the explicit local origins configured for Vite/Compose and Kubernetes; it does not use a wildcard origin. Review the hostname configuration migration when upgrading Keycloak.
 
-## Componentes
+See [Keycloak architecture and configuration](keycloak.md) for the detailed comparison of Kubernetes, Compose, and hybrid runtime URLs, clients, realm import, and user management.
 
-- **K3d/K3s:** K3d ejecuta nodos K3s como contenedores Docker. Rancher creó K3s; eso no implica que Rancher Manager esté instalado. K3s instala Traefik por defecto salvo que se desactive al crear el clúster.
-- **Entrada:** los Ingress declaran `/` al frontend, `/api` al gateway y `/auth` a Keycloak. El manifiesto declara `ingressClassName: traefik`. El controlador real debe coincidir con esa clase.
-- **Aplicación:** los tres servicios de aplicación son Deployments con una réplica e imágenes locales `hashimoto/*:latest`, importadas al clúster por el Makefile.
-- **PostgreSQL:** StatefulSet de una réplica con PVC `local-path` de 10 GiB. El script SQL se monta para inicialización.
-- **Kafka:** StatefulSet de una réplica en modo KRaft y PVC de 10 GiB. Una réplica es adecuada para desarrollo, no tolera la pérdida del nodo como un clúster de producción.
-- **Keycloak:** Deployment de una réplica que importa el realm desde ConfigMap y usa PostgreSQL.
+## Components
 
-El realm tiene una sola fuente JSON compartida con Compose; Kustomize genera el ConfigMap de Kubernetes desde ese archivo. Consulta [Keycloak en los tres escenarios](keycloak.md) para el detalle de issuer, JWKS, rutas y proceso de importación.
-- **Métricas:** Prometheus descubre los puertos de métricas de los pods Spring en `hashimoto-core`; Grafana viene preconfigurado con Prometheus como datasource. No se incluyen dashboards de aplicación.
-- **Registros:** Filebeat corre como DaemonSet y lee los logs del nodo; Elasticsearch almacena e indexa y Kibana consulta. Los directorios de logs montados por las aplicaciones son `emptyDir`, pero Filebeat recolecta logs de contenedores desde los nodos.
+- **K3d/K3s:** K3d runs K3s nodes as Docker containers. K3s includes Traefik by default unless it is disabled when the cluster is created. A previous Rancher-created K3s cluster does not imply that Rancher Manager is installed.
+- **Ingress:** Ingress resources route `/` to the frontend, `/api` to the Gateway, and `/auth` to Keycloak. They declare `ingressClassName: traefik`; the active controller must match this class.
+- **Application:** The three application services are single-replica Deployments using local `hashimoto/*:latest` images, built and imported into K3d by the Makefile.
+- **PostgreSQL:** A single-replica StatefulSet with a 10 GiB `local-path` PVC. An SQL initialization script is mounted into the container.
+- **Kafka:** A single-replica KRaft StatefulSet with a 10 GiB PVC. One replica is suitable for development but does not tolerate node loss like a production cluster.
+- **Keycloak:** A single-replica Deployment that imports the realm from a ConfigMap and uses PostgreSQL.
+- **Metrics:** Prometheus discovers the Spring pod metrics endpoints in `hashimoto-core`. Grafana is preconfigured to use Prometheus as a data source; application dashboards are not included.
+- **Logs:** Filebeat runs as a DaemonSet and reads node container logs. Elasticsearch stores and indexes them, and Kibana queries them. Application log directories are `emptyDir`, while Filebeat collects container logs from the nodes.
 
-## Persistencia y límites
+The realm has one JSON source shared with Compose; Kustomize builds the Kubernetes ConfigMap from that file.
 
-PostgreSQL, Kafka, Prometheus, Grafana y Elasticsearch declaran PVC. La clase `local-path` de K3s crea almacenamiento local asociado al clúster/nodo. No equivale a respaldo: eliminar el clúster puede eliminar los datos. Haz copias de seguridad fuera del clúster si necesitas conservarlos.
+## Persistence and operational limits
 
-### Conexión de Kafka entre namespaces
+PostgreSQL, Kafka, Prometheus, Grafana, and Elasticsearch declare PVCs. K3s `local-path` storage is attached to the local cluster/node; it is not a backup. Deleting the cluster may delete this data. Keep backups outside the cluster if the data matters.
 
-Patient Service usa `kafka-service.hashimoto-infra.svc.cluster.local:9092` como bootstrap para Spring Kafka y Axon. El bootstrap solo inicia la conexión: después Kafka entrega al cliente las direcciones de broker configuradas en `KAFKA_ADVERTISED_LISTENERS`. Por eso el listener interno anuncia el DNS completo de `kafka-service` en `hashimoto-infra`, que puede resolverse desde `hashimoto-core`; no se debe anunciar `kafka-service:9092`, que depende del namespace de origen del cliente. Compose conserva sus listeners propios (`kafka:29092` para contenedores y `localhost:9092` para procesos en el host).
+### Kafka across namespaces
 
-El quórum KRaft de este despliegue tiene un solo nodo y usa `localhost:29093` para la comunicación del controlador dentro del propio pod. Esto evita que el arranque dependa de resolver un Service de Kubernetes que aún no publica el pod porque todavía no está listo. Para un clúster Kafka multinodo, los voters deben configurarse con DNS estable por pod y un Service headless; esta configuración local de un solo nodo no se debe copiar tal cual a producción.
+Patient Service uses `kafka-service.hashimoto-infra.svc.cluster.local:9092` as the bootstrap address for Spring Kafka and Axon. Bootstrap only establishes the first connection. Kafka then returns broker addresses configured in `KAFKA_ADVERTISED_LISTENERS`. The internal listener therefore advertises the full DNS name of `kafka-service` in `hashimoto-infra`, which resolves from `hashimoto-core`. Do not advertise `kafka-service:9092`, which depends on the client's source namespace. Compose has its own listeners: `kafka:29092` for containers and `localhost:9092` for host processes.
 
-El modo de desarrollo usa `start-dev` en Keycloak, imágenes `latest` para servicios propios, contraseñas en texto claro en manifiestos, Elastic sin seguridad y recursos limitados/no uniformes. No expongas este clúster a una red pública ni reutilices estas credenciales.
+This deployment's single-node KRaft quorum uses `localhost:29093` for controller communication inside its own pod. This avoids making startup depend on a Kubernetes Service that cannot publish the pod before it is ready. For a multi-node Kafka cluster, configure voters with stable per-pod DNS and a headless Service; do not copy this single-node local setup unchanged into production.
 
-## Límites del entorno local
+## Local hostname and entry point
 
-La pila completa incluye PostgreSQL, Kafka, Elasticsearch, Prometheus, Grafana, Kibana y los servicios de aplicación; ajusta los recursos del equipo si los pods quedan `Pending` u `OOMKilled`. `local-path` guarda los datos dentro de los nodos K3d: eliminar el clúster puede eliminar bases de datos, tópicos, métricas y logs. El entorno usa contraseñas de desarrollo, `start-dev` en Keycloak y una réplica por componente; no debe exponerse a una red pública ni usarse como despliegue productivo.
+K3d publishes host ports `8085 → 80` and `8443 → 443` on its load balancer. The frontend Ingress accepts requests for `localhost` and `hashimoto.local`; the Keycloak Ingress and Keycloak realm issuer are currently configured for `localhost`. Add a local host mapping for `hashimoto.local` if you need the alias to resolve, but use `http://localhost:8085/` as the supported browser entry point for sign-in and registration. The browser treats `localhost` as a secure context required for Web Crypto and OIDC PKCE; plain HTTP on `hashimoto.local` is not guaranteed to provide that API and the current Keycloak hostname/redirect configuration does not use that alias.
+
+The onboarding guide shows how to add and verify the local host mapping. Supporting `hashimoto.local` as the full OIDC browser origin requires a separate HTTPS and Keycloak hostname/redirect configuration change.
+
+## Security and environment limits
+
+The development deployment uses Keycloak `start-dev`, `latest` tags for application images, plaintext development passwords in manifests, Elasticsearch without security, and limited/non-uniform resources. Do not expose this cluster to a public network or reuse these credentials.
+
+The full stack includes PostgreSQL, Kafka, Elasticsearch, Prometheus, Grafana, Kibana, and the application services. Adjust host resources if pods remain `Pending` or are `OOMKilled`. `local-path` stores data inside K3d nodes; deleting the cluster may remove databases, topics, metrics, and logs. This is a local learning environment with development passwords and one replica per component, not a production deployment.

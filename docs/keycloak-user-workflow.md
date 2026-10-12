@@ -1,76 +1,78 @@
-# Flujo de usuario y roles con Keycloak
+# Keycloak user and role workflow
 
-Esta guía recorre el flujo de desarrollo actual: registrarse desde Hashimoto, asignar permisos de aplicación desde Keycloak, iniciar sesión y comprobar que el backend recibe y valida el access token.
+This guide walks through the current development flow: register with Hashimoto, grant application permissions in Keycloak, sign in, and verify that the backend receives and validates the access token.
 
-## Qué se guarda y dónde
+## What is stored, and where
 
-- Keycloak guarda usuarios, credenciales, grupos y asignaciones de roles en PostgreSQL, en la base `keycloak_db`.
-- `patient-service` guarda los datos de pacientes en `patient_db`. Los usuarios de Keycloak no se crean como filas de usuarios en esa base.
-- El registro público está habilitado para este entorno local. Las altas nuevas no reciben roles de negocio automáticamente.
-- El JSON del realm configura clientes, scopes, roles/grupos iniciales y URI permitidas. No es el mecanismo para dar de alta cotidianamente a cada persona.
+- Keycloak stores users, credentials, groups, and role assignments in PostgreSQL database `keycloak_db`.
+- Patient Service stores patient records in `patient_db`. Keycloak users are not copied into that database as application users.
+- Public self-registration is enabled in this local development setup. New accounts do not receive business roles automatically.
+- The versioned realm JSON defines clients, scopes, initial roles/groups, and allowed redirect URIs. It is not the mechanism for creating each person's account during day-to-day use.
 
-En una organización, las cuentas pueden administrarse directamente en Keycloak o federarse desde un directorio corporativo como LDAP/Active Directory. El alta/baja y las políticas dependen del proceso de identidad de la empresa. Para este entorno de aprendizaje usaremos la consola de Keycloak.
+In a company, accounts may be managed directly in Keycloak or federated from a corporate directory such as LDAP or Active Directory. The organization defines its own joiner, mover, and leaver process. For this learning environment, use the Keycloak Admin Console.
 
-## 1. Arrancar la plataforma
+## 1. Start the platform and choose the right environment
 
-Elige el entorno que ya estés usando y asegúrate de que Keycloak, API Gateway, Patient Service y frontend estén activos. En la receta Kubernetes, aplica `k8s/infra/platform-env.yaml` antes de desplegar la infraestructura.
+Start Keycloak, API Gateway, Patient Service, and the frontend in the mode you intend to use. In the Kubernetes onboarding flow, apply `k8s/infra/platform-env.yaml` before deploying the infrastructure.
 
-| Entorno | Consola de administración | Aplicación |
+| Mode | Keycloak Admin Console | Hashimoto application |
 | --- | --- | --- |
-| Local híbrido o Compose | `http://localhost:8082/admin/` | `http://localhost:5173/` (híbrido) o `http://localhost:5173/` (Compose) |
-| Kubernetes local | `http://localhost:8085/auth/admin/` | `http://localhost:8085/` |
+| Hybrid (local Java and Vite, Compose infrastructure) | `http://localhost:8082/admin/` | `http://localhost:5173/` |
+| Full Docker Compose | `http://localhost:8082/admin/` | `http://localhost:5173/` |
+| Local Kubernetes (K3d) | `http://localhost:8085/auth/admin/` | `http://localhost:8085/` |
 
-En Kubernetes se usa `localhost` para que el navegador habilite Web Crypto, que Keycloak JS necesita para PKCE. Inicia sesión en la consola con la cuenta administrativa configurada para tu entorno; cambia a `hashimoto-realm` desde el selector de realms antes de gestionar identidades de la aplicación.
+The hybrid and Compose modes have separate PostgreSQL volumes, so their Keycloak users and role assignments are separate even though the console URL is the same. Kubernetes has its own database as well. Make sure you are using the console for the same mode as the application you opened.
 
-## 2. Crear permisos para el ejemplo
+For Kubernetes, use `localhost` in the browser. The browser treats this local origin as a secure context and enables Web Crypto, which the OIDC PKCE flow requires. Sign in to the Admin Console with the administrator account configured for that environment. Select the `hashimoto-realm` realm before managing application users.
 
-El realm fuente declara los roles de negocio `patient-read` y `patient-write`. En una instalación nueva los crea la importación. Si el realm ya existía antes de añadirlos al JSON, `--import-realm` no los agregará: créalos una vez desde **Realm roles** o realiza una importación de actualización deliberada.
+## 2. Create the permission group
 
-1. Abre **Groups** y crea el grupo `patient-clerks`.
-2. Dentro del grupo, abre **Role mapping**, elige **Assign role** y asigna `patient-read` y `patient-write`.
+The source realm defines the business roles `patient-read` and `patient-write`. A fresh Keycloak database receives them during the initial realm import. If the realm existed before those roles were added to the JSON, startup import will not add them; create them once from **Realm roles** or perform a deliberate realm update import.
 
-Asignar roles al grupo facilita dar a sus miembros los mismos permisos sin configurar cada cuenta por separado. La definición de roles está versionada con el realm; la pertenencia de usuarios al grupo se guarda en `keycloak_db`.
+1. Open **Groups** and create a group named `patient-clerks`.
+2. Open the group, go to **Role mapping**, choose **Assign role**, and assign `patient-read` and `patient-write`.
 
-## 3. Registrarse desde Hashimoto y conceder permisos
+Assigning roles to a group makes it easier to grant the same permissions to multiple users. The realm JSON versions the role definitions; group membership and user assignments are stored in `keycloak_db`.
 
-1. Abre Hashimoto y pulsa **Crear cuenta**. Keycloak sirve el formulario de registro; la contraseña se envía directamente al proveedor de identidad mediante Authorization Code con PKCE, no al API de pacientes.
-2. Completa el formulario y vuelve a Hashimoto. La identidad queda guardada en `keycloak_db`; crear una cuenta no crea un paciente.
-3. Un administrador abre **Groups**, selecciona `patient-clerks` y añade el nuevo usuario. Este grupo concede `patient-read` y `patient-write`.
-4. Cierra y vuelve a iniciar sesión para recibir un token que contenga los permisos asignados.
+## 3. Register a user and grant access
 
-Para crear una cuenta administrativamente en vez de usar el auto-registro, abre **Users** → **Create new user**, define la contraseña en **Credentials** y agrega al usuario al grupo `patient-clerks`.
+1. Open Hashimoto and choose **Create account**. Keycloak serves the registration form. The password goes directly to the identity provider through Authorization Code with PKCE; it is not sent to the patient API.
+2. Complete registration and return to Hashimoto. The identity is stored in `keycloak_db`; this does not create a patient record.
+3. In the Admin Console, open **Groups**, select `patient-clerks`, and add the new user as a member. The group grants `patient-read` and `patient-write`.
+4. Sign out and sign in again to obtain an access token with the updated role assignments.
 
-El frontend oculta el formulario de alta de pacientes a quien no tiene `patient-write`. La API también comprueba el rol en el servidor; ocultar el formulario no sustituye esa autorización.
+To create an account administratively instead of using self-registration, open **Users** → **Create new user**, set the password under **Credentials**, and add the user to `patient-clerks`.
 
-No habilites Direct Access Grants para este flujo. El cliente `hashimoto-tracker-web` es público y usa Authorization Code con PKCE; su configuración tiene el flujo estándar activado y el password grant desactivado.
+The frontend hides the patient creation form from users without `patient-write`. The API also checks the role on the server; hiding a form is not a substitute for backend authorization.
 
-## 4. Iniciar sesión y comprobar el recorrido
+Do not enable Direct Access Grants for this flow. The `hashimoto-tracker-web` client is public and uses Authorization Code with PKCE; Standard flow is enabled and the password grant is disabled.
 
-1. Abre la aplicación en la tabla anterior e inicia sesión.
-2. Abre las herramientas del navegador, pestaña **Network**, y busca la petición `POST /api/patients` después de enviar un paciente ficticio desde el formulario.
-3. Comprueba que la petición lleva `Authorization: Bearer …` y que la respuesta HTTP es satisfactoria. No compartas el header ni copies el token a tickets o capturas.
-4. En la consola de Keycloak, abre el usuario y confirma que pertenece a `patient-clerks`. La identidad y los roles son de Keycloak; el registro del paciente se procesa en Patient Service y su almacenamiento/eventos.
+## 4. Sign in and verify the request
 
-Para inspeccionar el payload localmente, puedes copiar el access token solo en tu sesión local y decodificar la parte central del JWT. Un JWT firmado está codificado, no cifrado: no publiques el token ni uses decodificadores web externos para datos reales. Deben aparecer `iss`, `sub`, `preferred_username`, `aud` con `api-gateway-client` y `realm_access.roles` (incluidos los roles heredados del grupo). El backend valida firma, issuer y audiencia; no confía en que el cliente web decida los permisos.
+1. Open the application for the selected environment and sign in.
+2. In the browser developer tools, open **Network**. Submit a fictitious patient and find the `POST /api/patients` request.
+3. Confirm the request contains an `Authorization: Bearer …` header and returns a successful HTTP response. Do not share the header or include the token in tickets, screenshots, or logs.
+4. In Keycloak, confirm that the user belongs to `patient-clerks`. Keycloak owns the identity and roles; Patient Service processes the patient record and its associated storage/events.
 
-## 5. Qué autorización hace hoy la aplicación
+To inspect the token payload locally, decode the middle section of the access token only on your own machine. A signed JWT is encoded, not encrypted: do not publish it or use public online decoders for real data. The payload should include `iss`, `sub`, `preferred_username`, `aud` containing `api-gateway-client`, and `realm_access.roles` containing the group-inherited roles. The backend validates the token signature, issuer, and audience; it does not trust the frontend to decide permissions.
 
-Gateway exige un token cuya firma, issuer y audiencia sean válidos para las rutas protegidas. Reenvía la cabecera Bearer a Patient Service, que repite esas validaciones y convierte los roles de `realm_access.roles` a autoridades de Spring (por ejemplo, `patient-read` pasa a `ROLE_PATIENT_READ`). El controlador aplica `PATIENT_READ` a `GET /api/patients` y `PATIENT_WRITE` a `POST /api/patients` mediante `@PreAuthorize`.
+## 5. What authorization the application enforces
 
-En el JSON versionado del realm, `registrationAllowed` está activado para el laboratorio local. En Kubernetes, `make keycloak-enable-registration` aplica el ajuste a una base que ya tenía el realm creado (la importación inicial no sobreescribe realms existentes). También se puede activar desde **Realm settings** → **Login** → **User registration**. En Compose, usa esa opción de la consola en `http://localhost:8082/admin/` si la base ya se había inicializado. La base de datos no se modifica al cambiar el JSON.
+The Gateway requires a token with a valid signature, issuer, and audience on protected routes. It forwards the bearer header to Patient Service, which repeats those checks and maps roles from `realm_access.roles` to Spring authorities (for example, `patient-read` becomes `ROLE_PATIENT_READ`). The controller requires `PATIENT_READ` for `GET /api/patients` and `PATIENT_WRITE` for `POST /api/patients` using `@PreAuthorize`.
 
-Es una diferencia entre autenticación (quién eres) y autorización (qué puedes hacer): cualquier usuario con token válido puede pasar Gateway, pero solo quien tenga el rol correspondiente puede ejecutar cada operación en Patient Service. Un usuario autenticado sin el rol debería recibir `403 Forbidden` del servicio. Tras asignar roles, inicia una sesión nueva para obtener un token con las asignaciones actualizadas; los roles van dentro del access token.
+This is the distinction between authentication (who you are) and authorization (what you may do): a valid token can pass the Gateway, but Patient Service still requires the role for each operation. An authenticated user without the required role should receive `403 Forbidden` from the service. After granting roles, sign in again to obtain a token with the updated assignments; roles are carried in the access token.
 
-## 6. Datos persistentes e importación
+Self-registration is enabled in the versioned realm for this local lab. For an existing Kubernetes realm, `make keycloak-enable-registration` updates registration because the initial import does not overwrite existing realms. Registration can also be enabled in **Realm settings** → **Login** → **User registration**. In Compose, use the Admin Console at `http://localhost:8082/admin/` if its database was initialized before registration was enabled. Editing the JSON does not update an existing database.
 
-Los usuarios y los cambios hechos desde la consola quedan en `keycloak_db`, no en el JSON del realm. La importación de inicio de Keycloak omite un realm que ya existe; editar el archivo compartido no sincroniza esos usuarios ni actualiza automáticamente el realm existente. La [documentación de importación de Keycloak](https://www.keycloak.org/server/importExport) describe este comportamiento.
+## 6. Persistence and realm imports
 
-Para reiniciar el ejercicio, elimina el usuario o grupo desde la consola. No elimines el volumen PostgreSQL como método habitual: también contiene otros datos persistentes. Si modificas el JSON del realm para declarar roles base, recuerda que un realm ya existente no los recibirá automáticamente por el import de arranque.
+Users and changes made in the Admin Console are stored in `keycloak_db`, not in the realm JSON. Keycloak's startup import skips an existing realm; editing the shared JSON does not synchronize users or automatically update that realm. See [Keycloak's import/export documentation](https://www.keycloak.org/server/importExport).
 
-## Diagnóstico rápido
+To reset this exercise, delete the test user or group in the Admin Console. Do not delete the PostgreSQL volume as a routine cleanup step: it may contain other persistent data. If you add base roles to the realm JSON, remember that an existing realm will not receive them automatically from the startup import.
 
-- **No puedes iniciar sesión:** confirma que el usuario está habilitado, que la contraseña no está pendiente de cambio y que elegiste el realm `hashimoto-realm`.
-- **HTTP 401:** token ausente, vencido, issuer no coincidente o sin la audiencia `api-gateway-client`. Revisa el mapper del cliente web, `API_AUDIENCE` y los logs de Gateway/Patient Service.
-- **No aparecen roles en el token:** revisa la asignación del grupo al usuario y de roles al grupo; asegúrate de inspeccionar el access token del cliente web.
-- **HTTP 403:** el token es válido, pero le falta `patient-read` para GET o `patient-write` para POST; revisa asignación de roles y vuelve a iniciar sesión para obtener un token actualizado.
+## Troubleshooting
 
+- **Sign-in fails:** confirm the user is enabled, the password has no pending update requirement, and the application is using the `hashimoto-realm` realm.
+- **HTTP 401:** the token may be missing or expired, the issuer may not match, or the token may lack the `api-gateway-client` audience. Check the web client's audience mapper, `API_AUDIENCE`, and Gateway/Patient Service logs.
+- **Roles are missing from the token:** check the user's group membership and the roles assigned to the group. Inspect the web client's access token, not its ID token.
+- **HTTP 403:** the token is valid, but the user lacks `patient-read` for GET or `patient-write` for POST. Review role assignments and sign in again for a refreshed token.
