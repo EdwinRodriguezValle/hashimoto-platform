@@ -61,7 +61,7 @@ See [Keycloak architecture and configuration](keycloak.md) for the detailed comp
 - **PostgreSQL:** A single-replica StatefulSet with a 10 GiB `local-path` PVC. An SQL initialization script is mounted into the container.
 - **Kafka:** A single-replica KRaft StatefulSet with a 10 GiB PVC. One replica is suitable for development but does not tolerate node loss like a production cluster.
 - **Keycloak:** A single-replica Deployment that imports the realm from a ConfigMap and uses PostgreSQL.
-- **Metrics:** Prometheus discovers the Spring pod metrics endpoints in `hashimoto-core`. Grafana is preconfigured to use Prometheus as a data source; application dashboards are not included.
+- **Metrics:** Prometheus discovers the Spring pod metrics endpoints in `hashimoto-core`. Grafana is preconfigured to use Prometheus and loads the Hashimoto Platform Overview operations dashboard. Customer health charts are future application features, separate from operational monitoring.
 - **Logs:** Filebeat runs as a DaemonSet and reads node container logs. Elasticsearch stores and indexes them, and Kibana queries them. Application log directories are `emptyDir`, while Filebeat collects container logs from the nodes.
 
 The realm has one JSON source shared with Compose; Kustomize builds the Kubernetes ConfigMap from that file.
