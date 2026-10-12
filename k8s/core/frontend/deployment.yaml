@@ -46,4 +46,3 @@ spec:
         - name: nginx-config-volume
           configMap:
             name: frontend-nginx-config
-

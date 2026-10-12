@@ -4,7 +4,7 @@
 
 This document describes the current resources under `k8s/`. They define a local development deployment on K3d/K3s, not a production architecture: the platform uses development credentials, single replicas, `local-path` storage, and several components without production hardening.
 
-Older diagrams in `docs/Architecture.md` and `docs/HashimotoArchitecureKubernetes.md` include future components such as additional microservices, Argo CD, and mobile applications. They are not part of the current Kubernetes deployment.
+Older diagrams in `docs/Architecture.md` and `docs/HashimotoArchitecureKubernetes.md` include future components such as additional microservices, delivery automation, and mobile applications. They are not part of the current Kubernetes deployment.
 
 ## Overview
 
@@ -84,6 +84,6 @@ The onboarding guide shows how to add and verify the local host mapping. Support
 
 ## Security and environment limits
 
-The development deployment uses Keycloak `start-dev`, local-only application images, plaintext development passwords in manifests, Elasticsearch without security, and limited/non-uniform resources. Do not expose this cluster to a public network or reuse these credentials. Argo CD can reconcile the Kustomize manifests once the matching image tags have been built and imported into K3d; it does not build or distribute the images.
+The development deployment uses Keycloak `start-dev`, local-only application images, plaintext development passwords in manifests, Elasticsearch without security, and limited/non-uniform resources. Do not expose this cluster to a public network or reuse these credentials. Kustomize pins application image versions; this local workflow builds and imports those images into K3d.
 
 The full stack includes PostgreSQL, Kafka, Elasticsearch, Prometheus, Grafana, Kibana, and the application services. Adjust host resources if pods remain `Pending` or are `OOMKilled`. `local-path` stores data inside K3d nodes; deleting the cluster may remove databases, topics, metrics, and logs. This is a local learning environment with development passwords and one replica per component, not a production deployment.

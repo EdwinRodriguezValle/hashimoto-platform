@@ -128,7 +128,7 @@ From the repository root, run:
 make build-all
 ```
 
-This target builds Patient Service, API Gateway, and the frontend with the same versioned tag, then imports those images into the K3d nodes. By default the tag is the current Git commit SHA; for uncommitted development builds, supply a unique tag such as `make build-all IMAGE_TAG="local-$(date -u +%Y%m%d%H%M%S)"`. Do not reuse a tag for different image contents. Build committed application code when using the SHA-based default. The target also updates `k8s/core/kustomization.yaml`; review and commit that image-tag change so Argo CD can reconcile the exact versions. The first build can take time because it downloads base images and Maven/npm dependencies. The Deployments use `imagePullPolicy: Never`, so the image must be imported before a Kubernetes rollout.
+This target builds Patient Service, API Gateway, and the frontend with the same versioned tag, then imports those images into the K3d nodes. By default the tag is the current Git commit SHA; for uncommitted development builds, supply a unique tag such as `make build-all IMAGE_TAG="local-$(date -u +%Y%m%d%H%M%S)"`. Do not reuse a tag for different image contents. Build committed application code when using the SHA-based default. The target also updates `k8s/core/kustomization.yaml`; review and commit that image-tag change so the cluster manifest records the exact image versions. The first build can take time because it downloads base images and Maven/npm dependencies. The Deployments use `imagePullPolicy: Never`, so the image must be imported before a Kubernetes rollout.
 
 ## 5. Deploy the platform
 
@@ -151,7 +151,7 @@ make deploy-all
 
 Before importing images or applying manifests, the Makefile checks that the active context is `k3d-hashimoto-cluster` to avoid deploying to another cluster by mistake.
 
-Kubernetes Secrets contain development-only passwords (`123` and `admin`). Never use these values outside your local machine. The local image flow imports image tags into K3d; Argo CD will reconcile manifests but will not build or publish images. For a remote cluster, publish versioned images to a registry, enforce tag immutability or deploy by digest, configure image pull credentials, and use a pull policy that permits registry access before switching workloads to it.
+Kubernetes Secrets contain development-only passwords (`123` and `admin`). Never use these values outside your local machine. The local image flow imports image tags into K3d. For a remote cluster, publish versioned images to a registry, enforce tag immutability or deploy by digest, configure image pull credentials, and use a pull policy that permits registry access.
 
 PostgreSQL creates `patient_db` as its initial database, and the initialization script creates `keycloak_db`. Patient Service, including Axon, uses `patient_db`; Keycloak uses `keycloak_db`. Initialization scripts run only when the PostgreSQL PVC is empty. Deleting a K3d cluster may delete its persistent data.
 

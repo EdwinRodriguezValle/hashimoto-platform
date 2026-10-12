@@ -94,7 +94,7 @@ The diagram shows the intended product direction, not a claim that every box is 
 | Persistence and events | PostgreSQL and Kafka are deployed for development | Domain-owned data stores and versioned events with clear ownership |
 | Observability | Prometheus/Grafana starter operations dashboard plus Filebeat/Elasticsearch/Kibana log search | Add service-level dashboards, tracing, alerting, and operational ownership |
 | Analytics and AI | Not deployed | Event-driven analytics and an optional provider-neutral AI integration |
-| Delivery automation | Local Makefile and K3d deployment | CI builds/tests/scans images; Argo CD reconciles approved Kubernetes manifests |
+| Delivery automation | Local Makefile and K3d deployment | CI builds/tests/scans images; a GitOps controller reconciles approved Kubernetes manifests |
 
 The platform currently has a shared PostgreSQL server with separate `patient_db` and `keycloak_db` databases. The target “service-owned data” model is a design direction: each service should own its data contract and other services should not query its tables directly. It does not require running a separate PostgreSQL server for every service on day one.
 
@@ -233,17 +233,17 @@ flowchart LR
   Repo --> CI[CI pipeline<br/>build · test · scan]
   CI --> Registry[Container registry<br/>versioned images]
   Repo --> Config[Reviewed Kubernetes configuration]
-  Config --> Argo[Argo CD<br/>planned GitOps controller]
+  Config --> GitOps[GitOps controller<br/>planned]
   Registry -->|Kubernetes pulls the referenced image| Cluster[Kubernetes workloads]
-  Argo --> Cluster
+  GitOps --> Cluster
   Cluster -. metrics, logs, traces .-> Ops[Monitoring and operations]
 
   class Dev,Repo source
   class CI,Registry build
-  class Config,Argo,Cluster,Ops deploy
+  class Config,GitOps,Cluster,Ops deploy
 ```
 
-CI should produce immutable, versioned images and report build/test/security results. Argo CD should reconcile reviewed deployment configuration from Git. The current project uses local Makefile targets and K3d; the CI/CD and Argo CD components in this diagram are planned and are not part of the current cluster.
+CI should produce immutable, versioned images and report build/test/security results. A GitOps controller should reconcile reviewed deployment configuration from its configuration repository. The current project uses local Makefile targets and K3d; the CI/CD and GitOps components in this diagram are planned and are not part of the current cluster.
 
 ## Current implementation references
 
