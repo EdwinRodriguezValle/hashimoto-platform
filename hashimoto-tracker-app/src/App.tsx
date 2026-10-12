@@ -1,4 +1,4 @@
-import { useAuth } from './context/AuthProvider';
+import { useAuth } from './context/useAuth';
 import { PatientForm } from './components/PatientForm';
 
 function App() {

@@ -1,17 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import keycloak from '../config/keycloak';
-
-interface AuthContextType {
-    authenticated: boolean;
-    username: string | undefined;
-    canCreatePatients: boolean;
-    login: () => void;
-    register: () => void;
-    logout: () => void;
-    getAccessToken: () => Promise<string | undefined>;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
+import { AuthContext } from './AuthContext';
 let initialization: Promise<boolean> | undefined;
 
 const initializeKeycloak = () => {
@@ -79,10 +68,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             {children}
         </AuthContext.Provider>
     );
-};
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) throw new Error('useAuth must be used within an AuthProvider');
-    return context;
 };

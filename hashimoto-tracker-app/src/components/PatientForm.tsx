@@ -1,6 +1,6 @@
 // src/components/PatientForm.tsx
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthProvider';
+import { useAuth } from '../context/useAuth';
 import { createPatientProfile } from '../services/patient/patientService.ts';
 
 
