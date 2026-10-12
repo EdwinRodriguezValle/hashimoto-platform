@@ -228,34 +228,7 @@ The local PostgreSQL instance hosts one database per service: `patient_db` for P
 - **Action**: Runs automatically on the first startup of an empty PostgreSQL data volume and executes `CREATE DATABASE keycloak_db;`.
 - **Important**: Initialization scripts do not run again when a volume already contains a database. Changing this script does not migrate existing volumes.
 
-## How start all 
+## Run the Kubernetes development cluster
 
-
-#  Crear el clúster manualmente con la configuración Senior.
-#  Ejecuta este comando completo directamente en tu terminal. Esto creará el clúster real con sus 3 nodos y el balanceador en el puerto 80 desde cero:
-
-k3d cluster create hashimoto-cluster --agents 2 --port "80:80@loadbalancer" --port "443:443@loadbalancer" --k3s-arg "--disable=traefik@server:*"
-
-# Activar el motor del Ingress Controller (Puerto 80)
-# Una vez que el comando anterior termine y te diga Cluster 'hashimoto-cluster' created successfully, ejecuta esta línea para instalar el ruteador de Nginx:
-
-curl -L -o nginx-ingress-controller.yaml https://githubusercontent.com
-
-# Siguiente
-kubectl apply -f nginx-ingress-controller.yaml
-
-# Paso tres
-bash
-# 1. Crear los entornos lógicos (Esto responde a tu pregunta, ¡ahora sí va!)
-kubectl apply -f k8s/namespaces.yaml
-
-# 2. Compilar e inyectar tus imágenes locales de Spring Boot y Frontend
-make build-all
-
-# 3. Levantar la base de datos, Kafka y Keycloak
-make deploy-infra
-
-# bash
-# 4. Desplegar los microservicios con sus escudos de red (initContainers)
-make deploy-core
+Follow the single, maintained [K3d onboarding guide](docs/k8s-onboarding.md). It creates the cluster with the Traefik Ingress controller expected by the manifests, builds/imports the application images, applies infrastructure configuration, and deploys the stack in dependency order.
 

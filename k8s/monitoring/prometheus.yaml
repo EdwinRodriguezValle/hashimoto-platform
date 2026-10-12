@@ -76,6 +76,13 @@ spec:
           ports:
             - containerPort: 9090
               name: http
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 30
           volumeMounts:
             - name: config-volume
               mountPath: /etc/prometheus

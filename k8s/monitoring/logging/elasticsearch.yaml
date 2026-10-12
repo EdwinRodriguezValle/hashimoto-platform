@@ -44,6 +44,13 @@ spec:
           ports:
             - containerPort: 9200
               name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
           volumeMounts:
             - name: elastic-data
               mountPath: /usr/share/elasticsearch/data

@@ -7,34 +7,6 @@ metadata:
   labels:
     k8s-app: filebeat
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: filebeat-config
-  namespace: hashimoto-logs
-  labels:
-    k8s-app: filebeat
-data:
-  filebeat.yml: |
-    filebeat.inputs:
-      - type: container
-        paths:
-          - /var/log/containers/*.log
-        processors:
-          - add_kubernetes_metadata:
-              host: ${NODE_NAME}
-              matchers:
-                - logs_path:
-                    logs_path: "/var/log/containers/"
-
-    setup.template.name: "hashimoto-platform-logs"
-    setup.template.pattern: "hashimoto-platform-logs-*"
-    setup.ilm.enabled: false
-
-    output.elasticsearch:
-      hosts: ["http://cluster.local"]
-      index: "hashimoto-platform-logs-%{+yyyy.MM.dd}"
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:

@@ -36,12 +36,11 @@ Desde la raíz del repositorio:
 
 ```bash
 make help
-make up
-make build-all
+make cluster-create
 make deploy-all
 ```
 
-`make deploy-all` usa el contexto Kubernetes activo y aplica manifiestos; no instala K3d, kubectl ni un Ingress Controller. La guía de incorporación contiene el procedimiento completo, incluyendo la entrada local de `hashimoto.local` y los valores de issuer/JWKS.
+`make cluster-create` crea K3d con Traefik, publica los puertos locales y selecciona el contexto del proyecto. `make deploy-all` comprueba ese contexto, construye e importa las imágenes y aplica las capas de infraestructura, aplicación y observabilidad. Ninguno de esos targets instala Docker, kubectl, k3d o Make en el host. La guía de incorporación contiene los pasos de instalación, `/etc/hosts` y verificación.
 
 Para ver el estado:
 

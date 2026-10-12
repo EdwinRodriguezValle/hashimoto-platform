@@ -2,9 +2,12 @@
 # HASHIMOTO PLATFORM - AUTOMATION MAKEFILE FOR KUBERNETES (K3d)
 # -----------------------------------------------------------------------------
 
-CLUSTER_NAME=hashimoto-cluster
+.NOTPARALLEL:
 
-.PHONY: help up down restart-ingress deploy-infra deploy-core deploy-ops deploy-logs build-patient build-gateway build-frontend build-all deploy-all
+CLUSTER_NAME ?= hashimoto-cluster
+K3D_AGENTS ?= 2
+
+.PHONY: help cluster-create cluster-use check-context up down deploy-infra deploy-core deploy-ops deploy-logs build-patient build-gateway build-frontend build-all deploy-all
 
 help: ## Muestra este menú de ayuda con los comandos disponibles
 	@echo "Uso: make [comando]"
@@ -13,47 +16,79 @@ help: ## Muestra este menú de ayuda con los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # --- CONTROL DEL CLÚSTER LOCAL ---
+cluster-create: ## Crea el clúster K3d local con Traefik y selecciona su contexto
+	k3d cluster create $(CLUSTER_NAME) --agents $(K3D_AGENTS) -p "8085:80@loadbalancer" -p "8443:443@loadbalancer"
+	kubectl config use-context k3d-$(CLUSTER_NAME)
+
+cluster-use: ## Selecciona el contexto K3d de este proyecto
+	kubectl config use-context k3d-$(CLUSTER_NAME)
+
+check-context: ## Evita desplegar accidentalmente en otro clúster Kubernetes
+	@expected="k3d-$(CLUSTER_NAME)"; current="$$(kubectl config current-context 2>/dev/null || true)"; \
+	if [ "$$current" != "$$expected" ]; then \
+		echo "Contexto actual: '$$current'. Ejecuta 'make cluster-use' (esperado: $$expected)."; \
+		exit 1; \
+	fi
+	@echo "Contexto Kubernetes: k3d-$(CLUSTER_NAME)"
+
 up: ## Enciende el clúster de K3d y reactiva los nodos locales
 	k3d cluster start $(CLUSTER_NAME)
+	kubectl config use-context k3d-$(CLUSTER_NAME)
 
 down: ## Apaga el clúster de K3d de forma segura para liberar RAM
 	k3d cluster stop $(CLUSTER_NAME)
 
-restart-ingress: ## Reinicia en caliente el Ingress Controller de Nginx (Limpia caché)
-	kubectl delete pod -n ingress-nginx --all
-
 # --- COMPILACIÓN E INYECCIÓN DE IMÁGENES (DOCKER + K3D) ---
-build-patient: ## Compila e importa la imagen local de patient-service
+build-patient: check-context ## Compila e importa la imagen local de patient-service
 	docker build -t hashimoto/patient-service:latest -f patient-service/Dockerfile .
 	k3d image import hashimoto/patient-service:latest -c $(CLUSTER_NAME)
 
-build-gateway: ## Compila e importa la imagen local de api-gateway
+build-gateway: check-context ## Compila e importa la imagen local de api-gateway
 	docker build -t hashimoto/api-gateway:latest -f api-gateway/Dockerfile .
 	k3d image import hashimoto/api-gateway:latest -c $(CLUSTER_NAME)
 
-build-frontend: ## Compila e importa la imagen local del frontend
+build-frontend: check-context ## Compila e importa la imagen local del frontend
 	docker build -t hashimoto/frontend:latest -f hashimoto-tracker-app/Dockerfile ./hashimoto-tracker-app
 	k3d image import hashimoto/frontend:latest -c $(CLUSTER_NAME)
 
 build-all: build-patient build-gateway build-frontend ## Compila e importa las 3 imágenes de negocio juntas
 
 # --- DESPLIEGUE POR CAPAS ORDENADAS ---
-deploy-infra: ## Despliega Postgres, Kafka y Keycloak en hashimoto-infra
+deploy-infra: check-context ## Configura y despliega Postgres, Kafka y Keycloak
 	kubectl apply -f k8s/namespaces.yaml
+	kubectl apply -f k8s/infra/platform-env.yaml
 	kubectl apply -f k8s/infra/postgres/
+	kubectl rollout status statefulset/postgres -n hashimoto-infra --timeout=300s
 	kubectl apply -f k8s/infra/kafka/
+	kubectl rollout status statefulset/kafka -n hashimoto-infra --timeout=300s
 	kubectl apply -k k8s/infra/keycloak/
+	kubectl rollout status deployment/keycloak -n hashimoto-infra --timeout=300s
 
-deploy-core: ## Despliega ConfigMaps, Ingress, Frontend y Microservicios en core
+deploy-core: check-context ## Despliega ConfigMaps, Ingress, Frontend y microservicios
 	kubectl apply -f k8s/core/platform-env.yaml
 	kubectl apply -f k8s/core/patient-service/
-	kubectl apply -f k8s/core/frontend/
 	kubectl apply -f k8s/core/api-gateway/
+	kubectl apply -f k8s/core/frontend/
+	kubectl rollout status deployment/patient-service -n hashimoto-core --timeout=600s
+	kubectl rollout status deployment/api-gateway -n hashimoto-core --timeout=300s
+	kubectl rollout status deployment/frontend -n hashimoto-core --timeout=180s
 
-deploy-ops: ## Despliega la telemetría (Prometheus y Grafana Enterprise) en ops
-	kubectl apply -f k8s/monitoring/
+deploy-ops: check-context ## Despliega Prometheus y Grafana en hashimoto-ops
+	kubectl apply -f k8s/monitoring/prometheus-config.yaml
+	kubectl apply -f k8s/monitoring/prometheus.yaml
+	kubectl apply -f k8s/monitoring/grafana.yaml
+	kubectl rollout status deployment/prometheus -n hashimoto-ops --timeout=300s
+	kubectl rollout status deployment/grafana -n hashimoto-ops --timeout=300s
 
-deploy-logs: ## Despliega la pila de analítica de logs (ELK + Filebeat DaemonSet)
+deploy-logs: check-context ## Despliega Elasticsearch, Kibana y Filebeat
 	kubectl apply -f k8s/monitoring/logging/
+	kubectl rollout status statefulset/elasticsearch -n hashimoto-logs --timeout=600s
+	kubectl rollout status deployment/kibana -n hashimoto-logs --timeout=300s
+	kubectl rollout status daemonset/filebeat -n hashimoto-logs --timeout=300s
 
-deploy-all: deploy-infra deploy-core deploy-ops deploy-logs ## Despliega las 4 capas completas del sistema
+deploy-all: check-context ## Construye imágenes y despliega la plataforma completa
+	$(MAKE) build-all
+	$(MAKE) deploy-infra
+	$(MAKE) deploy-core
+	$(MAKE) deploy-ops
+	$(MAKE) deploy-logs

@@ -52,7 +52,7 @@ public class SecurityConfig {
         http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/actuator/health", "/actuator/prometheus", "/error").permitAll()
+                        .pathMatchers("/actuator/health", "/actuator/health/**", "/actuator/prometheus", "/error").permitAll()
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

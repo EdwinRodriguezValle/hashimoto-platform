@@ -28,3 +28,6 @@ data:
           - source_labels: [__meta_kubernetes_namespace]
             action: keep
             regex: hashimoto-core # 👈 Monitorea solo el código de negocio
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            action: keep
+            regex: '8080|8081'

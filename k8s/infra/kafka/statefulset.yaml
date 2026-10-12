@@ -48,7 +48,9 @@ spec:
             - name: KAFKA_PROCESS_ROLES
               value: 'broker,controller'
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: '1@kafka-service:29093'
+              # Single-node local KRaft quorum: connect to this broker directly,
+              # avoiding a readiness/DNS dependency on a Kubernetes Service.
+              value: '1@localhost:29093'
             - name: KAFKA_LISTENERS
               value: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:29092'
             - name: KAFKA_INTER_BROKER_LISTENER_NAME
@@ -70,6 +72,13 @@ spec:
               name: broker
             - containerPort: 29093
               name: controller
+          readinessProbe:
+            tcpSocket:
+              port: broker
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
           volumeMounts:
             - name: kafka-storage
               mountPath: /tmp/kraft-combined-logs

@@ -28,7 +28,7 @@ flowchart LR
   Kibana[Kibana\nnamespace hashimoto-logs] --> ES
 ```
 
-La presencia de una flecha representa intención/configuración, no una garantía de que la conexión funcione. Hay discrepancias actuales detalladas en [Observaciones para un despliegue reproducible](#observaciones-para-un-despliegue-reproducible).
+La presencia de una flecha representa intención/configuración; los probes de disponibilidad y las comprobaciones del onboarding verifican que los servicios estén listos.
 
 ## Namespaces y responsabilidades
 
@@ -61,7 +61,7 @@ El hostname de Keycloak no se infiere de cualquier cabecera entrante: la imagen 
 - **Keycloak:** Deployment de una réplica que importa el realm desde ConfigMap y usa PostgreSQL.
 
 El realm tiene una sola fuente JSON compartida con Compose; Kustomize genera el ConfigMap de Kubernetes desde ese archivo. Consulta [Keycloak en los tres escenarios](keycloak.md) para el detalle de issuer, JWKS, rutas y proceso de importación.
-- **Métricas:** Prometheus descubre pods en `hashimoto-core`; Grafana consulta Prometheus. Los manifiestos no declaran datasource ni dashboards de Grafana.
+- **Métricas:** Prometheus descubre los puertos de métricas de los pods Spring en `hashimoto-core`; Grafana viene preconfigurado con Prometheus como datasource. No se incluyen dashboards de aplicación.
 - **Registros:** Filebeat corre como DaemonSet y lee los logs del nodo; Elasticsearch almacena e indexa y Kibana consulta. Los directorios de logs montados por las aplicaciones son `emptyDir`, pero Filebeat recolecta logs de contenedores desde los nodos.
 
 ## Persistencia y límites
@@ -72,16 +72,10 @@ PostgreSQL, Kafka, Prometheus, Grafana y Elasticsearch declaran PVC. La clase `l
 
 Patient Service usa `kafka-service.hashimoto-infra.svc.cluster.local:9092` como bootstrap para Spring Kafka y Axon. El bootstrap solo inicia la conexión: después Kafka entrega al cliente las direcciones de broker configuradas en `KAFKA_ADVERTISED_LISTENERS`. Por eso el listener interno anuncia el DNS completo de `kafka-service` en `hashimoto-infra`, que puede resolverse desde `hashimoto-core`; no se debe anunciar `kafka-service:9092`, que depende del namespace de origen del cliente. Compose conserva sus listeners propios (`kafka:29092` para contenedores y `localhost:9092` para procesos en el host).
 
+El quórum KRaft de este despliegue tiene un solo nodo y usa `localhost:29093` para la comunicación del controlador dentro del propio pod. Esto evita que el arranque dependa de resolver un Service de Kubernetes que aún no publica el pod porque todavía no está listo. Para un clúster Kafka multinodo, los voters deben configurarse con DNS estable por pod y un Service headless; esta configuración local de un solo nodo no se debe copiar tal cual a producción.
+
 El modo de desarrollo usa `start-dev` en Keycloak, imágenes `latest` para servicios propios, contraseñas en texto claro en manifiestos, Elastic sin seguridad y recursos limitados/no uniformes. No expongas este clúster a una red pública ni reutilices estas credenciales.
 
-## Observaciones para un despliegue reproducible
+## Límites del entorno local
 
-Antes de usarlo como procedimiento de instalación, hay que resolver o verificar en los manifiestos los siguientes puntos:
-
-1. **Variables de infraestructura:** `make deploy-infra` no aplica `k8s/infra/platform-env.yaml`, pero PostgreSQL y Keycloak referencian los ConfigMaps/Secrets que define. Aplicarlo antes de desplegar infraestructura.
-2. **Ingress:** el README raíz habla de desactivar Traefik e instalar Nginx con un archivo remoto incompleto/no versionado; los Ingress de `k8s/` declaran `traefik`. Elegir un controlador, documentar la instalación exacta y alinear clase/anotaciones.
-3. **Salida de Filebeat:** `output.elasticsearch.hosts` está configurado como `http://cluster.local`; el Service declarado es `elasticsearch-service` en `hashimoto-logs`, normalmente accesible como `http://elasticsearch-service.hashimoto-logs.svc.cluster.local:9200`.
-4. **Configuración de Prometheus:** `prometheus.yaml` monta el ConfigMap `prometheus-config`, pero `make deploy-ops` aplica `k8s/monitoring/` como directorio; kubectl aplica los YAML del directorio, aunque debe comprobarse que primero se crea el ConfigMap y que el RBAC permite la autodetección esperada. La configuración actual solo filtra por namespace y no muestra relabeling del puerto de métricas.
-5. **Receta del clúster y puertos:** los documentos contienen recetas distintas. `8085:80` y `8443:443` requieren abrir `http://localhost:8085`; `80:80` publica el puerto 80. La receta debe corresponder a la que se elija.
-
-No se asume que Rancher Manager, Argo CD, Nginx Ingress, cert-manager ni otros operadores estén instalados; no hay manifiestos versionados para ellos en `k8s/`.
+La pila completa incluye PostgreSQL, Kafka, Elasticsearch, Prometheus, Grafana, Kibana y los servicios de aplicación; ajusta los recursos del equipo si los pods quedan `Pending` u `OOMKilled`. `local-path` guarda los datos dentro de los nodos K3d: eliminar el clúster puede eliminar bases de datos, tópicos, métricas y logs. El entorno usa contraseñas de desarrollo, `start-dev` en Keycloak y una réplica por componente; no debe exponerse a una red pública ni usarse como despliegue productivo.

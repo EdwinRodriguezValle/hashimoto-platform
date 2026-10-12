@@ -63,6 +63,14 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+
+          readinessProbe:
+            httpGet:
+              path: /auth/realms/hashimoto-realm
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
           # El ConfigMap generado contiene el realm canónico con el nombre esperado
           # por el importador de Keycloak: <realm>-realm.json.
           volumeMounts:

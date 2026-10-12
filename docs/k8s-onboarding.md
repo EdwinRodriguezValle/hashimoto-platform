@@ -1,94 +1,121 @@
 # Incorporación: levantar Hashimoto en K3d
 
-Esta guía reconstruye el flujo desde una máquina de desarrollo limpia. Está basada en los manifiestos y el Makefile actuales. El primer despliegue requiere corregir/verificar los puntos de arquitectura que se enumeran al final; por eso no se debe interpretar un `kubectl apply` exitoso como prueba de que la aplicación quedó lista.
 
-## 1. Requisitos
+Sigue esta receta desde una máquina local nueva para crear el clúster, construir las imágenes y desplegar la plataforma. La ruta con comandos completos está dirigida a **Ubuntu 24.04 LTS de 64 bits (amd64 o arm64)**. Portainer puede permanecer instalado; no se necesita Rancher Manager. K3d crea nodos K3s como contenedores Docker y K3s incluye Traefik, que es el Ingress usado por los manifiestos.
 
-Instala y comprueba estas herramientas en tu máquina:
+Recomendación para ejecutar toda la pila, incluida la observabilidad: 4 CPU, 12 GiB de RAM y 60 GiB libres. Los puertos locales `8085` y `8443` deben estar disponibles. Si Docker, `kubectl`, `k3d`, Make y Git ya están instalados, salta al paso 2.
 
-- Docker Engine en ejecución
-- `kubectl`
-- `k3d`
-- GNU Make
-- Git
+## 1. Instalar las herramientas (Ubuntu 24.04)
 
-Clona el repositorio y ejecuta los comandos desde su raíz. Comprueba versiones e instalación:
+Instala utilidades requeridas y Docker Engine desde el repositorio oficial de Docker:
 
 ```bash
-docker version
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl git make gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+```
+
+Permite que tu usuario ejecute Docker sin anteponer `sudo` (el grupo `docker` concede privilegios equivalentes a root) y **cierra sesión y vuelve a entrar** para que el cambio tenga efecto:
+
+```bash
+sudo groupadd --force docker
+sudo usermod -aG docker "$USER"
+```
+
+Instala `kubectl` estable y valida su checksum. Estos comandos detectan la arquitectura amd64/arm64:
+
+```bash
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+kubectl_arch="$(dpkg --print-architecture)"
+kubectl_version="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+curl -fsSLo "$tmp_dir/kubectl" "https://dl.k8s.io/release/${kubectl_version}/bin/linux/${kubectl_arch}/kubectl"
+curl -fsSLo "$tmp_dir/kubectl.sha256" "https://dl.k8s.io/release/${kubectl_version}/bin/linux/${kubectl_arch}/kubectl.sha256"
+(cd "$tmp_dir" && echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check)
+sudo install -o root -g root -m 0755 "$tmp_dir/kubectl" /usr/local/bin/kubectl
+```
+
+Instala `k3d` desde el instalador oficial del proyecto:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+```
+
+Abre una terminal nueva y confirma que Docker no requiera `sudo` y que las herramientas estén disponibles:
+
+```bash
+docker run --rm hello-world
+docker compose version
 kubectl version --client
 k3d version
 make --version
+git --version
 ```
 
-K3d usa K3s, una distribución ligera de Kubernetes del ecosistema Rancher. No es necesario instalar Rancher Manager para crear un clúster K3d. En una instalación K3s normal, Traefik viene habilitado; la configuración de Ingress de este repositorio declara la clase `traefik`.
+Docker Engine, `kubectl` y k3d publican sus procedimientos oficiales de instalación; esta receta aplica los pasos de [Docker](https://docs.docker.com/engine/install/ubuntu/), [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/) y [k3d](https://github.com/k3d-io/k3d/blob/main/docs/index.md).
 
-## 2. Crear el clúster local
+## 2. Descargar el proyecto y preparar el host
 
-La siguiente receta coincide con los puertos que aparecen en la edición de `k8s/README.md`: el puerto 80 del load balancer del clúster se publica como 8085 del host, y 443 como 8443.
+Clona el repositorio (necesitas acceso de GitHub) y entra a su raíz:
 
 ```bash
-k3d cluster create hashimoto-cluster \
-  --agents 2 \
-  -p "8085:80@loadbalancer" \
-  -p "8443:443@loadbalancer"
+git clone https://github.com/EdwinRodriguezValle/hashimoto-platform.git
+cd hashimoto-platform
 ```
 
-No desactives Traefik con esta receta. Si ya existe un clúster, no lo recrees: comprueba su configuración y contexto primero. Crear un clúster alternativo con `--disable=traefik` exige instalar un controlador compatible y alinear `ingressClassName` en los manifiestos.
+Elastic 8.15 requiere que el kernel permita al menos 262144 memory maps. Deja el ajuste activo ahora y después de reiniciar Ubuntu:
+
+```bash
+echo 'vm.max_map_count=262144' | sudo tee /etc/sysctl.d/99-hashimoto-elasticsearch.conf
+sudo sysctl --system
+sysctl vm.max_map_count
+```
+
+Añade el hostname local de la aplicación:
+
+```bash
+grep -qE '(^|[[:space:]])hashimoto\.local([[:space:]]|$)' /etc/hosts || echo '127.0.0.1 hashimoto.local' | sudo tee -a /etc/hosts
+```
+
+## 3. Crear el clúster local
+
+Comprueba que no hay un clúster previo con ese nombre y créalo con el target del Makefile:
 
 ```bash
 k3d cluster list
-kubectl config get-contexts
-kubectl config use-context k3d-hashimoto-cluster
+make cluster-create
 kubectl cluster-info
 kubectl get nodes -o wide
 ```
 
-Para que el hostname publicado por Keycloak sea estable, añade `127.0.0.1 hashimoto.local` a `/etc/hosts` (o su equivalente en tu sistema). La URL de entrada de esta receta será `http://hashimoto.local:8085/`; Keycloak estará disponible bajo `/auth`.
+`make cluster-create` crea `hashimoto-cluster` con dos agentes, deja Traefik habilitado, publica `8085 → 80` y `8443 → 443` en el load balancer y selecciona el contexto `k3d-hashimoto-cluster`. Si el clúster ya existe, **no lo recrees**: usa `make cluster-use`; si estaba detenido, ejecuta `make up`.
 
-## 3. Crear namespaces y configuración
+## 4. Construir e importar las imágenes de la aplicación
 
-El orden importa: los recursos deben existir antes de que Deployments que los referencian arranquen.
-
-```bash
-kubectl apply -f k8s/namespaces.yaml
-kubectl apply -f k8s/infra/platform-env.yaml
-kubectl apply -f k8s/core/platform-env.yaml
-```
-
-Los Secrets actuales contienen contraseñas de desarrollo (`123` y `admin`) versionadas en YAML. No uses esos valores fuera de la máquina local. En un entorno compartido, reemplázalos por un mecanismo de secretos apropiado antes de aplicar.
-
-PostgreSQL crea `patient_db` como base inicial y el script de inicialización crea `keycloak_db`. El Patient Service (incluido Axon) usa `patient_db`; Keycloak usa `keycloak_db`. PostgreSQL solo ejecuta esos scripts cuando el directorio de datos está vacío. Si reutilizas un volumen existente, cambiar `POSTGRES_DB` o el SQL no renombra ni crea bases automáticamente: haz una migración explícita o inicia con un volumen nuevo si no necesitas conservar sus datos.
-
-### Contrato de Keycloak por escenario
-
-Los tres escenarios consumen la misma definición de realm; la configuración completa se explica en [Keycloak en Hashimoto Platform](keycloak.md).
-
-Gateway y Patient Service reciben dos variables: `KEYCLOAK_ISSUER_URI` es la URL externa que debe coincidir exactamente con el claim `iss`; `KEYCLOAK_JWK_SET_URI` es el endpoint de claves públicas que el servicio puede alcanzar desde su red.
-
-| Escenario | Issuer | JWKS para los backends |
-| --- | --- | --- |
-| Microservicios en IDE, dependencias en Compose | `http://localhost:8082/realms/hashimoto-realm` | `http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs` |
-| Aplicación completa en Compose | `http://localhost:8082/realms/hashimoto-realm` | `http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs` |
-| Kubernetes local | `http://hashimoto.local:8085/auth/realms/hashimoto-realm` | `http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/auth/realms/hashimoto-realm/protocol/openid-connect/certs` |
-
-La aplicación web usa una ruta relativa `/auth`: Vite la proxifica en modo IDE, el Nginx del frontend en Compose y Traefik hacia el Ingress de Keycloak en Kubernetes. Así el navegador conserva el mismo origen del frontend para sus llamadas OIDC.
-
-Los archivos de realm versionados son configuración inicial. `--import-realm` omite un realm si ya existe en la base de Keycloak; en una base persistente, editar el JSON no sincroniza ni sobrescribe la configuración existente. Para esa situación, cambia el cliente desde la consola/API de administración o planifica una importación offline explícita y respaldada. No borres volúmenes para forzar la importación si contienen datos que quieras conservar.
-
-Kafka anuncia a los clientes el DNS interno `kafka-service.hashimoto-infra.svc.cluster.local:9092`. El cliente usa ese nombre tras el bootstrap, así que cualquier servicio en otro namespace debe conectarse a un hostname anunciado que pueda resolver desde su propia red.
-
-## 4. Construir e importar imágenes
-
-El clúster K3d no usa automáticamente las imágenes locales de Docker. El Makefile construye las tres imágenes y las importa a los nodos K3d:
+Desde la raíz del repositorio ejecuta:
 
 ```bash
 make build-all
 ```
 
-Este paso requiere que Docker esté disponible y que los Dockerfiles puedan compilar. Los Deployments usan `imagePullPolicy: Never`, así que si las imágenes no están importadas, los pods no arrancarán.
+El target compila Patient Service, API Gateway y frontend y carga sus imágenes en los nodos K3d. Puede tardar la primera vez porque descarga imágenes base y dependencias Maven/npm. Los Deployments usan `imagePullPolicy: Never`, así que las imágenes deben estar importadas antes de desplegar la aplicación.
 
-## 5. Desplegar capas
+## 5. Desplegar la plataforma
+
+Ejecuta las capas en este orden:
 
 ```bash
 make deploy-infra
@@ -97,9 +124,21 @@ make deploy-ops
 make deploy-logs
 ```
 
-`make deploy-infra` vuelve a aplicar namespaces y manifiestos de Postgres, Kafka y Keycloak. Se aplica explícitamente `infra/platform-env.yaml` en el paso anterior porque el target actual no lo hace. `deploy-core` aplica su ConfigMap/Secret y los servicios de negocio. Los targets de métricas y logging crean sus namespaces si el paso 3 ya se ejecutó.
+`make deploy-infra` crea los namespaces, aplica primero `k8s/infra/platform-env.yaml`, despliega PostgreSQL y espera a que existan `patient_db` y `keycloak_db`; luego espera a Kafka, aplica el realm de Keycloak con Kustomize y espera a que el realm responda. `make deploy-core` aplica la configuración de `hashimoto-core` antes de los servicios y espera a que estén listos. Los últimos dos targets son observabilidad (Prometheus/Grafana y Elasticsearch/Kibana/Filebeat) y son opcionales para probar el flujo de negocio.
 
-El atajo es `make deploy-all`, pero en un primer despliegue conviene usar las capas por separado para localizar errores. `make deploy-all` no construye imágenes; ejecuta `make build-all` por separado.
+Para que un único comando construya las imágenes y despliegue las cuatro capas:
+
+```bash
+make deploy-all
+```
+
+El Makefile comprueba que el contexto activo sea `k3d-hashimoto-cluster` antes de importar imágenes o aplicar manifiestos, para evitar desplegar en otro clúster por error.
+
+Los Secrets de Kubernetes contienen contraseñas solo para desarrollo (`123` y `admin`). No uses estos valores fuera de tu máquina local.
+
+PostgreSQL crea `patient_db` como base inicial y el script de inicialización crea `keycloak_db`. Patient Service (incluido Axon) usa `patient_db`; Keycloak usa `keycloak_db`. Los scripts de inicialización solo se ejecutan cuando el PVC de PostgreSQL está vacío. Eliminar un clúster K3d puede eliminar sus datos persistentes.
+
+Keycloak usa la definición compartida del realm y los emisores/URLs JWKS por entorno descritos en [Keycloak en Hashimoto Platform](keycloak.md). En un volumen nuevo, el arranque importa el realm; si se reutiliza una base persistente y el realm ya existe, Keycloak omite esa importación.
 
 ## 6. Esperar y revisar el estado
 
@@ -117,6 +156,16 @@ kubectl get ingress -A
 kubectl get events -A --sort-by=.lastTimestamp
 ```
 
+Confirma las entradas HTTP de frontend, API y Keycloak:
+
+```bash
+curl --fail --silent --show-error --output /dev/null --write-out 'frontend %{http_code}\n' http://hashimoto.local:8085/
+curl --fail --silent --show-error --output /dev/null --write-out 'realm %{http_code}\n' http://hashimoto.local:8085/auth/realms/hashimoto-realm
+curl --silent --output /dev/null --write-out 'API sin token %{http_code}\n' http://hashimoto.local:8085/api/patients
+```
+
+Frontend y realm deben devolver `200`; la API sin token debe devolver `401`. Después inicia sesión y verifica el flujo con [el usuario de desarrollo](keycloak-user-workflow.md).
+
 Para investigar un pod:
 
 ```bash
@@ -125,11 +174,7 @@ kubectl logs -n hashimoto-core deployment/patient-service --tail=100
 kubectl logs -n hashimoto-infra deployment/keycloak --tail=100
 ```
 
-Abre `http://hashimoto.local:8085/` cuando los pods de frontend y el controlador de Ingress estén listos. Para acceso directo temporal al frontend, usa:
-
-```bash
-kubectl port-forward -n hashimoto-core service/frontend-service 8085:80
-```
+Abre `http://hashimoto.local:8085/` cuando los targets anteriores terminen correctamente. Inicia sesión con la cuenta administrativa de Keycloak para crear el usuario de desarrollo; sigue [el flujo de usuario y roles](keycloak-user-workflow.md) para preparar `patient-read` y `patient-write`.
 
 ## 7. Operación diaria
 
@@ -142,13 +187,6 @@ kubectl logs -n hashimoto-core deployment/api-gateway -f --tail=100
 
 Detener el clúster conserva su configuración y almacenamiento local. `k3d cluster delete hashimoto-cluster` elimina el clúster y puede hacer perder datos guardados en sus volúmenes locales.
 
-## 8. Antes de declarar el entorno reproducible
+## 8. Límites del entorno local
 
-Los manifiestos actuales tienen discrepancias que pueden impedir que todo quede listo:
-
-- Debe aplicarse `k8s/infra/platform-env.yaml` antes de Postgres y Keycloak; el target de Makefile no lo aplica.
-- Los Ingress usan clase Traefik, mientras que una receta antigua del README raíz desactiva Traefik e intenta descargar una definición Nginx desde una URL inválida/no versionada. Decide qué controlador usar y deja una única instalación reproducible.
-- Filebeat apunta a `http://cluster.local`, no al Service de Elasticsearch.
-- `make deploy-ops` instala Prometheus y Grafana, pero no configura datasource/dashboard automáticamente.
-
-La descripción y pasos para resolverlos están en [Arquitectura Kubernetes](k8s-architecture.md#observaciones-para-un-despliegue-reproducible). Hasta corregirlos, trata este procedimiento como mapa de instalación y aprendizaje, no como receta garantizada de clúster idéntico y operativo.
+Esta receta levanta los manifiestos actuales con credenciales de desarrollo y almacenamiento local. No es una instalación de producción ni un respaldo: eliminar el clúster puede eliminar datos persistentes. Grafana recibe Prometheus como datasource automáticamente, pero no se incluyen dashboards específicos. En macOS/Windows usa Docker Desktop y las instrucciones oficiales de instalación de las herramientas; los comandos de instalación y configuración de `/etc/hosts` de esta guía son específicos de Ubuntu.
