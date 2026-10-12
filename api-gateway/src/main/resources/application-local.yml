@@ -11,8 +11,8 @@ spring:
         oauth2:
             resourceserver:
                 jwt:
-                    issuer-uri: http://localhost:8082/realms/hashimoto-realm
-                    jwk-set-uri: http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs
+                    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8082/realms/hashimoto-realm}
+                    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs}
 
 # 💥 Variable de entorno para tus logs locales en formato YAML
 LOG_PATH: "../logs/api-gateway.log"

@@ -1,75 +1,48 @@
-# React + TypeScript + Vite
+# Hashimoto Tracker Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The browser application for Hashimoto Platform. It currently provides the sign-in and registration entry points and the patient registration flow. Symptom, medication, routine, and activity tracking are future product work; see the [platform roadmap](../RoadMap.md).
 
-Currently, two official plugins are available:
+## Where it fits
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```mermaid
+flowchart LR
+  User[Browser] -->|OIDC Authorization Code + PKCE| KC[Keycloak]
+  User -->|/api/patients + Bearer token| GW[API Gateway]
+  GW --> PS[Patient Service]
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+The app is a React 19, TypeScript, and Vite single-page application. It authenticates through the public Keycloak client `hashimoto-tracker-web`; it does not contain a client secret. API requests use the relative `/api` path, so the browser has one application origin and does not need to know individual service addresses. The API Gateway validates the access token and routes the request; Patient Service validates it again and applies operation-level roles.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Ports and network paths
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Run mode | Browser URL | App server port | API path from browser |
+| --- | --- | --- | --- |
+| Vite development / hybrid | `http://localhost:5173` | `5173` | Vite proxies `/api` to `localhost:8081` and `/auth` to Keycloak at `localhost:8082` |
+| Docker Compose | `http://localhost:5173` | Container `80`, host `5173` | Nginx proxies `/api` to `api-gateway:8081` and `/auth` to Keycloak on the Compose network |
+| K3d / Kubernetes | `http://localhost:8085` | Service `80` behind Traefik | Ingress routes `/api` to the Gateway and `/auth` to Keycloak |
 
+The Compose host port `5173` differs from the container port `80`. In Kubernetes, use the documented browser entry point `localhost:8085`; this origin supports the Web Crypto API required by the OIDC PKCE flow. See the [Kubernetes onboarding guide](../docs/k8s-onboarding.md).
+
+## Run the frontend locally
+
+Requirements: Node.js `20.19+` or `22.12+` and npm. Start the infrastructure and backend services first; the default Vite proxy expects Keycloak on host port `8082` and API Gateway on `8081`.
+
+```bash
+npm ci
+npm run dev -- --host
 ```
+
+Open `http://localhost:5173`. For a production build and local static preview:
+
+```bash
+npm run build
+npm run preview
+```
+
+Other package scripts: `npm run lint` runs ESLint. Docker Compose and Kubernetes workflows are documented in the [root README](../README.md).
+
+## Current API integration
+
+`src/services/patient/patientService.ts` sends `POST /api/patients` with a Keycloak bearer token. The current request fields are `firstName`, `lastName`, `gender`, `dni`, `email`, and `age`. The backend requires the `patient-write` role. The app also obtains its user access token through the Keycloak adapter; user passwords are handled by Keycloak and are not sent to this API.
+
+Keycloak realm, client, proxy, and role setup is described in [Keycloak architecture](../docs/keycloak.md) and the [user and role workflow](../docs/keycloak-user-workflow.md).

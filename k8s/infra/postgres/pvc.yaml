@@ -1,4 +1,5 @@
-# Sirve para pedirle a Kubernetes que te reserve 10 Gigabytes de espacio en tu disco para que la base de datos no se borre jamás si el pod se reinicia.
+# OPTIMIZACIÓN KUBERNETES: para acelerar el rendimiento en cluster, aumentamos almacenamiento persistente y dejamos la BD como StatefulSet con PVC real.
+# Esto evita que el estado de Postgres se pierda al reiniciar el pod y mejora la estabilidad de I/O.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

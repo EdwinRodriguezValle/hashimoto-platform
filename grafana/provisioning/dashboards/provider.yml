@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Hashimoto Platform
+    orgId: 1
+    folder: Hashimoto
+    type: file
+    disableDeletion: true
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

@@ -1,11 +1,11 @@
 // src/components/PatientForm.tsx
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthProvider';
+import { useAuth } from '../context/useAuth';
 import { createPatientProfile } from '../services/patient/patientService.ts';
 
 
 export const PatientForm: React.FC = () => {
-    const { token } = useAuth();
+    const { getAccessToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
@@ -21,7 +21,11 @@ export const PatientForm: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!token) return;
+        const token = await getAccessToken();
+        if (!token) {
+            setMessage('❌ Error: No hay un token de Keycloak activo. Inicia sesión nuevamente.');
+            return;
+        }
 
         setLoading(true);
         setMessage('');

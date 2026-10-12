@@ -1,7 +1,4 @@
 # Permisos Especiales y Orquestador: k8s/monitoring/logging/filebeat.yaml
-# Como Filebeat necesita meterse a las entrañas del sistema operativo de los nodos para leer los archivos de log globales,
-# requiere permisos de administración avanzados (RBAC). Le daremos una identidad segura (ServiceAccount) y lo desplegaremos como un DaemonSet.
-
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -17,7 +14,7 @@ metadata:
   labels:
     k8s-app: filebeat
 rules:
-  - apiGroups: [""] # "" indica el core API group
+  - apiGroups: [""]
     resources:
       - namespaces
       - pods
@@ -48,7 +45,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
-kind: DaemonSet # 👈 ¡El estándar profesional para recolectores!
+kind: DaemonSet
 metadata:
   name: filebeat
   namespace: hashimoto-logs
@@ -80,7 +77,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           securityContext:
-            runAsUser: 0 # Requiere root temporal únicamente para engancharse a los sockets de log del sistema
+            runAsUser: 0
           volumeMounts:
             - name: config
               mountPath: /usr/share/filebeat/filebeat.yml
@@ -94,7 +91,6 @@ spec:
               readOnly: true
             - name: varlibdockercontainers
               mountPath: /var/lib/docker/containers
-              readOnly: true
       volumes:
         - name: config
           configMap:

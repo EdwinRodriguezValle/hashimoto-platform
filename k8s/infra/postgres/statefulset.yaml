@@ -1,5 +1,5 @@
-# Aquí configuramos el contenedor de Postgres 16 leyendo las credenciales de tu archivo platform-env.yaml
-# que inyectamos antes, y definimos su servicio interno para que otros contenedores lo encuentren.
+# OPTIMIZACIÓN KUBERNETES: Postgres debe ir como StatefulSet con PVC real y recursos suficientes para no sufrir latencia por CPU/memoria bajo carga.
+# Esto mejora la velocidad del flujo HTTP -> Axon -> Event Store en cluster.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -19,6 +19,21 @@ spec:
       containers:
         - name: postgres
           image: postgres:16
+          command:
+            - /bin/bash
+            - -c
+            - |
+              exec docker-entrypoint.sh postgres \
+                -c shared_buffers=768MB \
+                -c work_mem=16MB \
+                -c max_connections=150
+          resources:
+            requests:
+              cpu: "750m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "3Gi"
           env:
             - name: POSTGRES_DB
               valueFrom:
@@ -38,14 +53,21 @@ spec:
           ports:
             - containerPort: 5432
               name: dbport
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - pg_isready -U "$POSTGRES_USER" -d patient_db && pg_isready -U "$POSTGRES_USER" -d keycloak_db
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
-            # 👇 NUEVO: Montamos el archivo virtual del script SQL en la ruta de inicio
             - name: init-script-volume
               mountPath: /docker-entrypoint-initdb.d
       volumes:
-        # 👇 NUEVO: Declaramos el volumen virtual apuntando al ConfigMap
         - name: init-script-volume
           configMap:
             name: postgres-init-script

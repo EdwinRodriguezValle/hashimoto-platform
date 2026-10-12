@@ -1,0 +1,22 @@
+# guardar las variables de entorno que tus aplicaciones y servicios van a leer más adelante.
+#(Nota: Para producción las contraseñas se encriptan, pero para empezar a probar las dejaremos legibles en texto plano usando un formato básico).
+
+# ⚙️ CAPA DE INFRAESTRUCTURA (INFRA)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: hashimoto-infra
+data:
+  DB_NAME: "patient_db"
+  DB_USER: "postgres"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: platform-secrets
+  namespace: hashimoto-infra
+type: Opaque
+stringData:
+  DB_PASSWORD: "123"
+  KEYCLOAK_ADMIN_PASSWORD: "admin"

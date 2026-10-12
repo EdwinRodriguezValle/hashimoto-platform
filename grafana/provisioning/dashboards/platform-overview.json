@@ -1,0 +1,57 @@
+{
+  "id": null,
+  "uid": "hashimoto-platform-overview",
+  "title": "Hashimoto Platform Overview",
+  "tags": ["hashimoto", "operations"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Application targets",
+      "type": "stat",
+      "description": "Prometheus scrape availability for the configured application targets.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 0 },
+      "targets": [{ "expr": "up{job=\"hashimoto-apps\"}", "legendFormat": "{{instance}}", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] }
+    },
+    {
+      "id": 2,
+      "title": "HTTP requests per second",
+      "type": "timeseries",
+      "description": "Request throughput from Spring Boot HTTP server metrics. An empty chart can mean no requests or no matching metric series yet.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sum by (application) (rate(http_server_requests_seconds_count{job=\"hashimoto-apps\"}[5m]))", "legendFormat": "{{application}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "min": 0 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 3,
+      "title": "Mean HTTP server response time",
+      "type": "timeseries",
+      "description": "Five-minute mean based on the exported request duration sum and count. This is not a percentile latency metric.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "targets": [{ "expr": "sum by (application) (rate(http_server_requests_seconds_sum{job=\"hashimoto-apps\"}[5m])) / sum by (application) (rate(http_server_requests_seconds_count{job=\"hashimoto-apps\"}[5m]))", "legendFormat": "{{application}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    },
+    {
+      "id": 4,
+      "title": "JVM heap in use",
+      "type": "timeseries",
+      "description": "Heap memory used by each instrumented Spring Boot application.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "sum by (application) (jvm_memory_used_bytes{job=\"hashimoto-apps\", area=\"heap\"})", "legendFormat": "{{application}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "bytes", "min": 0 }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+    }
+  ]
+}

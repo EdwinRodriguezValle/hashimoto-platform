@@ -1,222 +1,194 @@
 # Hashimoto Platform
 
-Hashimoto Platform is a microservices-based application for patient profile management, identity, observability, and API routing. The stack includes:
+Hashimoto is an early-stage health-tracking platform for people living with Hashimoto's disease and other immune conditions. The product direction is to help people record symptoms, routines, medication, food, and other daily factors, then review their history and possible patterns.
 
-- React frontend (Vite + Nginx)
-- Spring Boot API Gateway (Spring Cloud Gateway)
-- Spring Boot Patient Service (Axon Framework + JPA)
-- PostgreSQL (Relational Database)
-- Apache Kafka (Event-driven Messaging)
-- Keycloak (IAM & Identity Management)
-- Prometheus + Grafana (Metrics Stack)
-- Elasticsearch + Kibana + Filebeat (Centralized Logging Stack)
+The repository contains the current development platform and a roadmap for future product capabilities. It is not a clinical decision system, and the architecture diagrams do not mean every future service or integration has been implemented.
 
-This document explains how to run the project locally, which URLs are available, how the platform is structured, and how to handle strict Linux file permissions during co-programming.
+## Current status
 
-## 1. Overview
+The current application foundation includes:
 
-The platform is composed of several services:
+- **Web app:** React, TypeScript, and Vite; Nginx serves the production container image.
+- **API Gateway:** Spring Boot and Spring Cloud Gateway. It validates access-token signature, issuer, and audience before routing API requests.
+- **Patient Service:** Spring Boot with Axon/JPA for the current patient create/read workflow. It validates tokens and enforces patient roles.
+- **Identity:** Keycloak handles sign-in, registration, and access tokens using OpenID Connect Authorization Code with PKCE.
+- **Data and messaging:** PostgreSQL and Kafka.
+- **Observability:** Prometheus/Grafana for metrics and Filebeat/Elasticsearch/Kibana for logs.
+- **Local deployment:** Docker Compose for a one-machine stack and K3d/Kubernetes manifests for the local cluster.
 
-- **Frontend**: React app served by Vite in local development and by Nginx in Docker.
-- **API Gateway**: Spring Cloud Gateway, used as the main entry point for backend requests. Handles Token Relay.
-- **Patient Service**: Main business service built with Axon Framework for event-driven patient creation and retrieval.
-- **Keycloak**: IAM and user authentication provider.
-- **PostgreSQL**: Relational database providing persistence for both Keycloak and the Patient Service.
-- **Kafka**: Event-driven message broker for Axon Framework events.
-- **Prometheus**: Metrics scraping and time-series storage.
-- **Grafana**: Visual metrics dashboards.
-- **Elasticsearch + Kibana**: Centralized log storage, indexing, and UI exploration.
+The symptom, routine, meal, and medication-tracking workflows are still product work to define and build. See the [12-month roadmap](RoadMap.md) and the [target architecture](docs/fullArchitectureHashimoto%20.md) for future plans.
 
-## 2. Architecture & Data Flow
+## Choose how to run it
 
-The application works as follows:
+| Mode | Application processes | Start here |
+| --- | --- | --- |
+| **Full Docker Compose** | Frontend, Gateway, Patient Service, and infrastructure run in containers | [Quick start](#quick-start-full-docker-compose) |
+| **Hybrid development** | Frontend and Java services run on the host; PostgreSQL, Kafka, Keycloak, and observability run in Docker | [Hybrid development](#hybrid-development-local-services--docker-infrastructure) |
+| **Kubernetes on K3d** | The platform runs in the local K3d cluster | [K3d onboarding](docs/k8s-onboarding.md) |
 
-- The user accesses the frontend at `http://localhost:5173`.
-- The frontend authenticates against **Keycloak** (`http://localhost:8082`) using PKCE.
-- The frontend sends requests containing the Bearer Token to the gateway at `http://localhost:8081`.
-- The gateway routes requests to the **Patient Service** (`http://localhost:8080`) and automatically relays the token.
-- The Patient Service validates the JWT tokens via an optimized lazy `JwtDecoder` process.
-- **PostgreSQL** stores patient entities and Axon event stores.
-- **Kafka** handles distributed events.
-- **Prometheus** scrapes metrics from Spring Actuator endpoints.
-- **Filebeat** runs as root, reads logs from the host, and ships them to **Elasticsearch**.
-- **Kibana** is used to explore logs and observability data.
+Use one mode at a time. Hybrid services and full Compose expose the same host ports, so stop one mode's application processes before starting the other.
 
-## 3. Services and Access URLs
+## Quick start: full Docker Compose
 
-Once the platform is running, these URLs are available on your host machine:
+### Requirements
 
-- **Frontend**: http://localhost:5173
-- **API Gateway**: http://localhost:8081
-- **Patient Service**: http://localhost:8080
-- **Keycloak (Admin Console)**: http://localhost:8082
-- **Grafana**: http://localhost:3000
-- **Prometheus**: http://localhost:9090
-- **Kibana**: http://localhost:5601
-- **Elasticsearch**: http://localhost:9200
-- **PostgreSQL**: localhost:5432
-- **Kafka Broker**: localhost:9092
+- Docker Engine with the Docker Compose plugin.
+- Enough local memory for PostgreSQL, Kafka, Keycloak, Elasticsearch, Kibana, Prometheus, Grafana, and the application containers. The full observability stack is resource intensive.
 
-## 4. Prerequisites
+### 1. Configure local development variables
 
-Before starting the project, make sure you have:
-
-- **Docker + Docker Compose** installed.
-- **Java 21** installed if you want to run local Spring Boot services from your IDE.
-- **Maven** installed.
-- **Node.js (v20+) and npm** installed for frontend development.
-
-## 5. Start the Platform (Full-Stack Docker)
-
-From the project root, to build and run all services in containers from A to Z:
+Copy the sample file once:
 
 ```bash
-mvn clean package -DskipTests
+cp .env.example .env
+```
+
+`.env.example` contains development-only values. Keep `.env` private and do not use those passwords in a shared or production environment.
+
+### 2. Build and start the stack
+
+From the repository root:
+
+```bash
+docker compose config --quiet
 docker compose up -d --build
+docker compose ps
 ```
 
-If you only want to rebuild the frontend and the microservices after code changes:
+The first build downloads base images and dependencies and may take several minutes. Wait for PostgreSQL, Keycloak, and Elasticsearch to report healthy before using the application.
+
+### 3. Open the services
+
+| Service | Local URL |
+| --- | --- |
+| Hashimoto web app | [http://localhost:5173/](http://localhost:5173/) |
+| Keycloak Admin Console | [http://localhost:8082/admin/](http://localhost:8082/admin/) |
+| API Gateway health | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) |
+| Patient Service health | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) |
+| Prometheus | [http://localhost:9090/](http://localhost:9090/) |
+| Grafana | [http://localhost:3000/](http://localhost:3000/) |
+| Elasticsearch | [http://localhost:9200/](http://localhost:9200/) |
+| Kibana | [http://localhost:5601/](http://localhost:5601/) |
+| PostgreSQL | `localhost:5432` |
+| Kafka host listener | `localhost:9092` |
+
+Keycloak's local Compose administrator is `admin` / `admin`. This is for local development only. In the `hashimoto-realm`, register an account through the app, then have an administrator add it to the `patient-clerks` group to grant the patient roles. See [Keycloak user and role workflow](docs/keycloak-user-workflow.md).
+
+The API is protected. A request without a valid access token should receive `401`; a valid user without the required role should receive `403` for a role-protected operation.
+
+### Stop the stack and manage its data
 
 ```bash
-docker compose up -d --build frontend api-gateway patient-service
+docker compose down
 ```
 
-## 6. Run the Project Locally During Development
+This stops and removes the containers but preserves named volumes. `docker compose down -v` also deletes the local database, Kafka, metrics, and Elasticsearch data; use it only when you intentionally want a full reset.
 
-### 6.1 Hybrid Mode: Local Java Services + Docker Infra (Recommended for Coding)
+Useful log command:
 
-This is the recommended workflow when you are actively coding the Java microservices and want them to run from your IDE or terminal while the backing infrastructure stays in Docker.
+```bash
+docker compose logs -f api-gateway patient-service keycloak
+```
 
-1. **Start the Infrastructure Containers:**
-   ```bash
-   docker compose up -d postgres kafka keycloak elasticsearch kibana filebeat prometheus grafana
-   ```
+## Hybrid development: local services + Docker infrastructure
 
-2. **Run the API Gateway (Terminal 1):**
-   ```bash
-   cd api-gateway
-   mvn clean spring-boot:run -Dspring-boot.run.profiles=local
-   ```
+Use this mode when editing Java or frontend code. The Java processes and Vite run on the host, while their dependencies stay in Docker.
 
-3. **Run the Patient Service (Terminal 2):**
-   ```bash
-   cd patient-service
-   mvn clean spring-boot:run -Dspring-boot.run.profiles=local
-   ```
+### Requirements
 
-4. **Run the Frontend in Dev Mode (Terminal 3):**
-   ```bash
-   cd hashimoto-tracker-app
-   npm install
-   npm run dev -- --host
-   ```
+- Docker Engine and Compose.
+- JDK 21 and Maven for the Spring Boot services.
+- Node.js **20.19+** (or **22.12+**) and npm for the Vite frontend.
 
-### 6.2 Frontend Only in Vite (Connecting to Docker Backend)
+If you use SDKMAN with more than one Java installed, select Java 21 in every terminal that starts a Java service:
 
-If you prefer to develop just the React app directly from your IDE while the entire backend is up in Docker, run:
+```bash
+sdk use java 21.0.9-tem
+java -version
+mvn -version
+```
+
+Both version commands should report Java 21. This selection applies only to the current terminal. Install that SDKMAN version once with `sdk install java 21.0.9-tem` if it is not present; alternatively, configure another installed JDK 21 in your IDE or `JAVA_HOME`.
+
+### 1. Start only the infrastructure containers
+
+From the repository root, make sure `.env` exists as described above, then run:
+
+```bash
+mkdir -p logs
+docker compose up -d postgres kafka keycloak elasticsearch kibana filebeat prometheus grafana
+```
+
+Creating `logs/` first keeps it owned by your local account for Java processes running on the host. If you previously ran the full Compose application and its log files are root-owned, restore ownership of this generated directory before starting local Java services: `sudo chown -R "$(id -u):$(id -g)" logs`.
+
+### 2. Start API Gateway and Patient Service
+
+Open separate terminals. In each Java terminal, select JDK 21 first if you use SDKMAN.
+
+Terminal 1:
+
+```bash
+cd api-gateway
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+Terminal 2:
+
+```bash
+cd patient-service
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+### 3. Start the frontend
+
+In another terminal:
 
 ```bash
 cd hashimoto-tracker-app
-npm install
+npm ci
 npm run dev -- --host
 ```
-The dev server is configured with a proxy in `vite.config.ts` that intercepts `/api` calls and routes them to `http://localhost:8081` (API Gateway).
 
-## 7. Local Development vs. Docker Profile Strategy
+Open [http://localhost:5173/](http://localhost:5173/). Vite proxies `/api` to the local API Gateway and `/auth` to Keycloak in Compose. The browser stays on `localhost`, which supports Web Crypto required by the OIDC PKCE flow.
 
-The architecture separates environment properties using Spring Profiles to prevent conflicts regarding token signers and host boundaries.
+## Kubernetes on K3d
 
-### Local Profile (`application-local.yml`)
-When running from your host machine/IDE:
-- **Keycloak Issuer**: `http://localhost:8082/realms/hashimoto-realm`
-- **Keycloak JWK Set**: `http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs`
-- **PostgreSQL**: `jdbc:postgresql://localhost:5432/patient_db`
-- **Kafka**: `localhost:9092`
-- **Log Path**: `../logs/api-gateway.log` or `../logs/patient-service.log`
+The K3d manifests deploy the current application and infrastructure to a local Kubernetes cluster. Follow the maintained [K3d onboarding guide](docs/k8s-onboarding.md) for host requirements, the `hashimoto.local` host mapping, cluster creation, image builds/imports, deployment order, and checks. Use `http://localhost:8085/` as the browser URL for the Kubernetes OIDC flow.
 
-### Docker Environment (`application.yml` Default)
-When running inside containers:
-- **Keycloak Issuer**: `http://localhost:8082/realms/hashimoto-realm` (Matches the token signed by the physical browser).
-- **Keycloak JWK Set**: `http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs` (Queries Keycloak through the inner bridge network).
-- **PostgreSQL**: `jdbc:postgresql://postgres:5432/patient_db`
-- **Kafka**: `kafka:29092`
-- **Log Path**: `/app/logs/api-gateway.log` or `/app/logs/patient-service.log`
+Read [Kubernetes architecture](docs/k8s-architecture.md) for namespaces, services, storage, ingress, and Kafka networking. Read [Keycloak architecture and configuration](docs/keycloak.md) for issuer/JWKS URLs and identity setup across Compose, hybrid, and Kubernetes.
 
----
+## Security and data boundaries
 
-## 8. ⚠️ CRITICAL: File Permissions & Co-Programming Bloopers
+- `hashimoto-tracker-web` is a public OIDC client and uses PKCE; it contains no client secret.
+- The API Gateway validates the access token's signature, issuer, and `api-gateway-client` audience. Patient Service validates it again and authorizes patient operations using Keycloak roles.
+- Keycloak stores identities and credentials in `keycloak_db`. Patient Service stores patient data and its Axon/read-model data in `patient_db`. These are separate databases on the current local PostgreSQL server.
+- Self-registration does not grant business roles automatically. An administrator manages patient permissions through the `patient-clerks` group.
+- The current setup is for local development. Its sample passwords, single-node infrastructure, and local storage are not production settings.
 
-This project enforces strict security standards, combining non-root users (`1000:1000`), `root` daemons (Filebeat), and host-bound volumes. **If someone clones this repository for the first time, containers or local apps will crash due to Linux permission errors.**
+Health information is sensitive. Do not send identifiable data to external analytics or AI providers until privacy, security, clinical-safety, and provider requirements have been reviewed. The future provider integrations are described in the [target architecture](docs/fullArchitectureHashimoto%20.md) and [roadmap](RoadMap.md); they are not implemented in the current app.
 
-Follow these strict rules to avoid or fix permission blockages:
-
-### 8.1 The Root Cause (Why it breaks)
-- When you run the stack in Docker, **Filebeat** runs as `root`. If it creates the `./logs` folder or log files on your host, your local user (`edwin`, `john`, etc.) won't be able to write to them from IntelliJ, throwing a `java.io.FileNotFoundException (Permission denied)`.
-- Conversely, if you run microservices inside Docker, they run as `root` or `1000:1000`. If they mount volumes that belong to another owner on the host, they will crash with `mmap-ed active query log: permission denied`.
-
-### 8.2 The Ultimate Permission Reset Script
-If any container crashes on startup or your IDE says `Permission denied` on log files, run these commands from the **project root** on your machine:
-
-```bash
-# 1. Create the unified logs folder if it doesn't exist
-mkdir -p ./logs
-
-# 2. Reclaim ownership of the logs folder for your active local user
-sudo chown -R $USER:$USER ./logs
-
-# 3. Grant absolute read/write permissions so Docker (root) and IDEs can coexist
-sudo chmod -R 777 ./logs
-
-# 4. Fix Prometheus and Grafana named volume data blockages
-sudo chown -R 1000:1000 ./prometheus_data 2>/dev/null || true
-```
-
-### 8.3 Ownership Map Reference
-- **`./logs` folder**: Shared between your IDE, Docker Backend, and Filebeat. **Must be `chmod 777`**.
-- **`./prometheus_data`**: Used by Prometheus container. Must belong to UID `1000:1000`.
-- **`./init-scripts`**: Read-only entrypoint for PostgreSQL. Needs read permissions (`chmod +r`).
-
----
-
-## 9. Logging Strategy & Centralization
-
-To keep the repository perfectly clean, all duplicated log directories (`app/logs`, `hashimoto_logs`, `patient_logs`) have been deprecated.
-
-### Unified Structure
+## Repository map
 
 ```text
-hashimoto-platform/
-├── logs/                      <-- 📁 SINGLE SOURCE OF TRUTH (Ignored in .gitignore)
-│   ├── api-gateway.log
-│   └── patient-service.log
-├── docker-compose.yaml
-├── filebeat.yml
-├── api-gateway/
-├── patient-service/
-└── hashimoto-tracker-app/
+api-gateway/             Spring Cloud Gateway and token validation
+patient-service/         Patient API, domain logic, and persistence
+hashimoto-tracker-app/   React/Vite frontend
+k8s/                     K3d/Kubernetes manifests
+init-scripts/            PostgreSQL first-start initialization
+docs/                    Architecture, Keycloak, and onboarding guides
+RoadMap.md               Tentative 12-month product and engineering plan
+Makefile                 Local K3d build and deployment commands
+docker-compose.yaml      Full local Docker development stack
 ```
 
-- **Local Mode**: Logs write directly outwards to `../logs/`.
-- **Docker Mode**: Logs write to `/app/logs/`.
-- **Docker Volume Mount**: `./logs:/app/logs` links both worlds seamlessly.
-- **Filebeat**: Mounts `./logs:/app/logs` as well and reads strictly from `/app/logs/*.log`.
+Generated logs are stored under `./logs/` and excluded from Git. Do not use blanket `chmod 777` permissions. If a local permission error occurs, inspect the owner and mode of the specific file or directory and fix only that path.
 
-## 10. Filebeat & Java Multiline Management
+## Documentation
 
-Filebeat is configured using a custom `filestream` tracking engine. It includes a built-in regex parser to ensure that Spring Boot `NullPointerExceptions` and Axon Framework stack traces are **not split into separate lines** inside Kibana, keeping logs intact.
-
-```yaml
-parsers:
-  - multiline:
-      type: pattern
-      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}' # Detects ISO timestamps
-      negate: true
-      match: after
-```
-
-## 11. Database Initialization (The Keycloak Trap)
-The official PostgreSQL Docker image **only creates one database** automatically via `POSTGRES_DB: patient_db`.
-Because Keycloak requires its own isolated database (`keycloak_db`), this repository mounts a bootstrap script:
-
-- **Location**: `./init-scripts/init.sql`
-- **Action**: Runs automatically on the first container startup to verify and execute `CREATE DATABASE keycloak_db;`. 
+- [Tentative 12-month roadmap](RoadMap.md)
+- [Target application architecture](docs/fullArchitectureHashimoto%20.md)
+- [Kubernetes architecture](docs/k8s-architecture.md)
+- [K3d onboarding](docs/k8s-onboarding.md)
+- [Logs and metrics guide](docs/observability.md)
+- [Keycloak architecture and configuration](docs/keycloak.md)
+- [Keycloak user and role workflow](docs/keycloak-user-workflow.md)

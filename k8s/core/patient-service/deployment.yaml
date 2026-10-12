@@ -1,4 +1,4 @@
-# Configurará un pod ejecutable apuntando a una imagen local llamada hashimoto/patient-service:latest.
+# OPTIMIZACIÓN KUBERNETES: para acelerar el servicio en cluster, subimos memoria/CPU, ajustamos probes para arrancar Axon/Spring y activamos JVM con G1GC + soporte a contenedores.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,15 +16,19 @@ spec:
     spec:
       containers:
         - name: patient-service
-          image: hashimoto/patient-service:latest
+          image: hashimoto/patient-service
           imagePullPolicy: Never
           ports:
             - containerPort: 8080
           env:
             - name: LOG_PATH
               value: "/app/logs/patient-service.log"
+            - name: APP_SECURITY_DISABLED
+              value: "false"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:+UseContainerSupport -XX:+UseG1GC -Xms512m -Xmx1g"
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres-service.hashimoto-infra.svc.cluster.local:5432/hashimoto_db"
+              value: "jdbc:postgresql://postgres-service.hashimoto-infra.svc.cluster.local:5432/patient_db"
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:
@@ -35,26 +39,47 @@ spec:
                 secretKeyRef:
                   name: platform-secrets
                   key: DB_PASSWORD
-            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+            - name: KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-service.hashimoto-infra.svc.cluster.local:9092"
-            - name: KEYCLOAK_AUTH_SERVER_URL
-              value: "http://cluster.local"
+            - name: AXON_KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka-service.hashimoto-infra.svc.cluster.local:9092"
+            - name: KEYCLOAK_ISSUER_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: KEYCLOAK_ISSUER_URI
+            - name: KEYCLOAK_JWK_SET_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: KEYCLOAK_JWK_SET_URI
+            - name: API_AUDIENCE
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: API_AUDIENCE
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "768Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1.5Gi"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 6
 
-#          # 🩺 Sondas de salud optimizadas con margen de inicialización extendido
-#          livenessProbe:
-#            httpGet:
-#              path: /actuator/health/liveness
-#              port: 8080
-#            initialDelaySeconds: 90 # 👈 Le otorgamos 90 segundos para establecer conexiones con Postgres y Kafka
-#            periodSeconds: 15
-#            failureThreshold: 4
-#          readinessProbe:
-#            httpGet:
-#              path: /actuator/health/readiness
-#              port: 8080
-#            initialDelaySeconds: 90
-#            periodSeconds: 15
-#
           volumeMounts:
             - name: app-logs
               mountPath: /app/logs

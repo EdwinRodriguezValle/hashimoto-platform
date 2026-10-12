@@ -1,76 +1,71 @@
-// src/context/AuthProvider.tsx
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import keycloak from '../config/keycloak';
+import { AuthContext } from './AuthContext';
+let initialization: Promise<boolean> | undefined;
 
-// Definimos qué información compartirá este contexto con toda la app
-interface AuthContextType {
-    authenticated: boolean;
-    username: string | undefined;
-    token: string | undefined;
-    logout: () => void;
-}
-let isInitialized = false;
-
-const AuthContext = createContext<AuthContextType | null>(null);
+const initializeKeycloak = () => {
+    initialization ??= keycloak.init({
+        onLoad: 'check-sso',
+        checkLoginIframe: false,
+        pkceMethod: 'S256',
+    });
+    return initialization;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isReady, setIsReady] = useState(false);
-    const [authInfo, setAuthInfo] = useState<Omit<AuthContextType, 'logout'>>({
+    const [authInfo, setAuthInfo] = useState({
         authenticated: false,
-        username: undefined,
-        token: undefined,
+        username: undefined as string | undefined,
+        canCreatePatients: false,
     });
 
     useEffect(() => {
-        // 💡 Si ya se inició la inicialización, nos saltamos el doble disparo de StrictMode
-        if (isInitialized) return;
-        isInitialized = true;
-        // Inicialización segura con PKCE
-        keycloak
-            .init({
-                onLoad: 'login-required',
-                checkLoginIframe: false,
-                pkceMethod: 'S256',
-            })
+        initializeKeycloak()
             .then((authenticated) => {
                 setAuthInfo({
                     authenticated,
                     username: keycloak.tokenParsed?.preferred_username,
-                    token: keycloak.token,
+                    canCreatePatients: keycloak.hasRealmRole('patient-write'),
                 });
-                setIsReady(true);
             })
-            .catch((err) => {
-                console.error('❌ Failed to initialize Keycloak:', err);
-                isInitialized = false; // Permitir reintento si falla radicalmente
-            });
+            .catch((error: unknown) => {
+                console.error('Failed to initialize Keycloak:', error);
+            })
+            .finally(() => setIsReady(true));
     }, []);
 
-    const logout = () => {
-        keycloak.logout({ redirectUri: window.location.origin });
+    const login = () => {
+        void keycloak.login({ redirectUri: window.location.origin });
     };
 
-    // Mientras Keycloak redirige o valida, mostramos un estado de carga limpio
+    const register = () => {
+        void keycloak.register({ redirectUri: window.location.origin });
+    };
+
+    const logout = () => {
+        void keycloak.logout({ redirectUri: window.location.origin });
+    };
+
+    const getAccessToken = async () => {
+        if (!keycloak.authenticated) return undefined;
+
+        try {
+            await keycloak.updateToken(30);
+            return keycloak.token;
+        } catch (error) {
+            console.error('Unable to refresh the Keycloak access token:', error);
+            return undefined;
+        }
+    };
+
     if (!isReady) {
-        return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-        <h2>Loading Hashimoto Platform Security...</h2>
-        </div>
-    );
+        return <main className="auth-loading" aria-live="polite">Conectando con Hashimoto Identity…</main>;
     }
 
     return (
-        <AuthContext.Provider value={{ ...authInfo, logout }}>
-    {children}
-    </AuthContext.Provider>
-);
-};
-
-// Hook personalizado para usar la autenticación en cualquier componente con una sola línea
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
+        <AuthContext.Provider value={{ ...authInfo, login, register, logout, getAccessToken }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };

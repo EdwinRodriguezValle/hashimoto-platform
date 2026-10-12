@@ -1,8 +1,44 @@
-el API Gateway es el paso estratégico perfecto. En una arquitectura de microservicios profesional, el Frontend (React) nunca debe conocer las direcciones de IP ni los puertos individuales de tus 10 o 15 microservicios; en su lugar, le hace todas las peticiones a una única puerta de entrada centralizada: el API Gateway, y este se encarga de redirigir el tráfico.Antes de configurar las rutas en tu API Gateway, necesitamos dejar listo el endpoint GET en el controlador de tu pat
-ient-service para que la puerta de entrada tenga una ruta real a la que apuntar.
+# API Gateway
 
-Paso 2: Entendiendo tu API GatewayComo estás utilizando el stack de Spring Boot 3, lo más común y estándar en la industria es usar Spring Cloud Gateway para esta tarea. El API Gateway funciona mediante un archivo de configuración (normalmente un application.yml) donde mapeas las reglas de enrutamiento (rutas).Por ejemplo, le diremos al Gateway: "Cualquier petición que te llegue a la ruta /api/patients/**, redirígela internamente hacia el contenedor http://patient-service:8080".Para avanzar al Gateway, ¿podrías compartirme el contenido del archivo application.properties o application.yml que se encuentra dentro de la carpeta de tu api-gateway? Así configuraremos las propiedades exactas de enrutamiento para enlazarlo con tu microservicio de pacientes.
+The API Gateway is the single backend entry point for application API traffic. It exposes the public API route, validates incoming Keycloak access tokens, and forwards requests to the appropriate internal service.
 
-Para montar un API Gateway profesional utilizando el ecosistema moderno de Spring Boot 3 y Java 21, se utiliza un módulo oficial llamado Spring Cloud Gateway. Este componente actúa como un proxy inverso ligero: recibe las peticiones en un puerto (por ejemplo, el 8081 o el 8080 global) y las redirige hacia el microservicio adecuado dentro de la red de Docker.
+## Where it fits
 
-Cómo funcionará el circuito una vez cclereado esto? Cuando este par de archivos estén guardados, tu API Gateway estará listo para el combate. El flujo de red cambiará a un nivel profesional:El Frontend (React) o Postman ya no llamará al puerto 8080.Enviará la petición al puerto global del Gateway: http://localhost:8081/api/patients.El API Gateway recibirá la petición, leerá el Path=/api/patients/**, comprenderá la regla y la redirigirá de forma transparente en milisegundos hacia el puerto 8080 de tu microservicio de pacientes
+```mermaid
+flowchart LR
+  Web[Web app / API client] -->|HTTP + Bearer access token| GW[API Gateway :8081]
+  GW -->|/api/patients/**| PS[Patient Service :8080]
+  GW -.->|JWKS public signing keys| KC[Keycloak]
+  PS -.->|Validates token and patient roles| KC
+```
+
+The current configured route is `/api/patients/**` to Patient Service. The Gateway validates token signature, issuer, expiry, and the `api-gateway-client` audience before forwarding. It preserves the request path and bearer token; Patient Service validates the token independently and enforces `patient-read` or `patient-write` roles. The Gateway is not a user database and does not replace service-level authorization.
+
+## Ports and service addresses
+
+| Run mode | Gateway address / port | Patient Service target | Keycloak signing keys |
+| --- | --- | --- | --- |
+| Hybrid (Java on host) | `localhost:8081` | `localhost:8080` (`application-local.yml`) | `localhost:8082` |
+| Docker Compose | Host `localhost:8081`; container `api-gateway:8081` | `http://patient-service:8080` | `http://keycloak:8080/.../certs` |
+| Kubernetes | Cluster Service `api-gateway.hashimoto-core.svc.cluster.local:8081`; ingress exposes `/api` on the platform origin | `http://patient-service.hashimoto-core.svc.cluster.local:8080` | Internal Keycloak Service DNS in `hashimoto-infra` |
+
+In Kubernetes and Compose, backend-to-backend traffic uses service DNS names, not a developer machine's `localhost`. The public token issuer still uses the browser-facing Keycloak URL configured for that mode; issuer and JWKS addresses have different purposes. See [Keycloak architecture](../docs/keycloak.md).
+
+## Run in hybrid development
+
+Requirements: JDK 21 and Maven. Start PostgreSQL, Kafka, and Keycloak in Docker Compose, then start Patient Service and run:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+The local profile routes patient requests to `localhost:8080` and retrieves Keycloak keys from `localhost:8082`. From the repository root, the complete hybrid sequence is in the [root README](../README.md#hybrid-development-local-services--docker-infrastructure).
+
+## Current API and operations
+
+- `POST /api/patients` is routed to Patient Service and requires a valid token with the `patient-write` role.
+- `GET /api/patients` is routed to Patient Service and requires a valid token with the `patient-read` role.
+- `/actuator/health` and `/actuator/prometheus` are exposed for health and metrics collection.
+- The Gateway runs as a reactive Spring Cloud Gateway application on port `8081`.
+
+No service-specific routes should be called directly from the browser; add and maintain public API routes here as services are introduced. Platform deployment and K3d steps are in [Kubernetes architecture](../docs/k8s-architecture.md) and [onboarding](../docs/k8s-onboarding.md).

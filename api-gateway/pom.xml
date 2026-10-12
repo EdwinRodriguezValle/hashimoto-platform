@@ -35,11 +35,6 @@
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
 
-        <!-- 5. Cliente OAuth2 (¡INDISPENSABLE! Activa la fábrica del filtro TokenRelay) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-client</artifactId>
-        </dependency>
     </dependencies>
 
     <build>

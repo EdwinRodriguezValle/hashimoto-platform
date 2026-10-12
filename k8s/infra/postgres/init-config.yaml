@@ -8,7 +8,8 @@ data:
     -- Script de Inicialización Corporativa para Hashimoto Platform
     CREATE DATABASE keycloak_db;
     
-    \c hashimoto_db;
+    -- POSTGRES_DB is patient_db; Keycloak uses its separate keycloak_db database.
+    \c patient_db;
     
     -- 1. Tabla de Latido de Infraestructura
     CREATE TABLE IF NOT EXISTS cluster_heartbeat (

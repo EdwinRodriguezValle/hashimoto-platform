@@ -54,6 +54,8 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_URL: http://localhost:8082
+      KC_PROXY_HEADERS: xforwarded
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://${DB_HOST}:5432/keycloak_db
       KC_DB_USERNAME: ${DB_USER}
@@ -61,7 +63,7 @@ services:
     ports:
       - "8082:8080"
     volumes:
-      - ./keycloak-config:/opt/keycloak/data/import:ro
+      - ./k8s/infra/keycloak/hashimoto-realm-realm.json:/opt/keycloak/data/import/hashimoto-realm-realm.json:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,6 +160,9 @@ services:
       - "8080:8080"
     environment:
       - LOG_PATH=${LOG_PATH_PATIENT} # 👈 Inyección dinámica limpia
+      - KEYCLOAK_ISSUER_URI=http://localhost:8082/realms/hashimoto-realm
+      - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+      - API_AUDIENCE=api-gateway-client
     depends_on:
       postgres:
         condition: service_healthy
@@ -180,6 +185,9 @@ services:
       - "8081:8081"
     environment:
       - LOG_PATH=${LOG_PATH_GATEWAY} # 👈 Corregido: ya no pisa a patient-service.log
+      - KEYCLOAK_ISSUER_URI=http://localhost:8082/realms/hashimoto-realm
+      - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+      - API_AUDIENCE=api-gateway-client
     depends_on:
       keycloak:
         condition: service_healthy
@@ -197,6 +205,8 @@ services:
     user: "1000:1000"
     ports:
       - "5173:80"
+    environment:
+      API_GATEWAY_URL: http://api-gateway:8081
     depends_on:
       - api-gateway
     networks:

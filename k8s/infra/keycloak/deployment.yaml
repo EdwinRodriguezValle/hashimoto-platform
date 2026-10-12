@@ -22,6 +22,16 @@ spec:
           # 👇 ACTUALIZADO: Añadimos el flag oficial de importación al comando de arranque
           command: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
           env:
+            # Imagen Keycloak 24: URL externa de discovery y del claim `iss`.
+            - name: KC_HOSTNAME_URL
+              value: "http://localhost:8085/auth"
+            - name: KC_HTTP_RELATIVE_PATH
+              value: "/auth"
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: "admin"
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
@@ -39,7 +49,7 @@ spec:
             - name: KC_DB
               value: "postgres"
             - name: KC_DB_URL
-              value: "jdbc:postgresql://postgres-service:5432/hashimoto_db"
+              value: "jdbc:postgresql://postgres-service:5432/keycloak_db"
             - name: KC_DB_USERNAME
               valueFrom:
                 configMapKeyRef:
@@ -53,13 +63,22 @@ spec:
           ports:
             - containerPort: 8080
               name: http
-          # 👇 NUEVO: Mapeamos el volumen en la carpeta de importación de Keycloak
+
+          readinessProbe:
+            httpGet:
+              path: /auth/realms/hashimoto-realm
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
+          # El ConfigMap generado contiene el realm canónico con el nombre esperado
+          # por el importador de Keycloak: <realm>-realm.json.
           volumeMounts:
             - name: realm-volume
               mountPath: /opt/keycloak/data/import
               readOnly: true
       volumes:
-        # 👇 NUEVO: Declaramos el volumen virtual leyendo desde el ConfigMap
+        # El nombre se reescribe al ConfigMap con hash generado por Kustomize.
         - name: realm-volume
           configMap:
             name: keycloak-realm-config

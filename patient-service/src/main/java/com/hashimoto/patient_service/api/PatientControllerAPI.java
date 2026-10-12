@@ -18,22 +18,19 @@ import java.util.concurrent.CompletableFuture;
 public class PatientControllerAPI {
 
     private final CommandGateway commandGateway;
-    private final QueryGateway queryGateway; // <-- 1. INYECTAMOS EL GATEWAY DE CONSULTAS
+    private final QueryGateway queryGateway;
 
-    // Actualizamos el constructor
-    public PatientControllerAPI(CommandGateway commandGateway, QueryGateway queryGateway) {
+    public PatientControllerAPI(CommandGateway commandGateway,
+                               QueryGateway queryGateway) {
         this.commandGateway = commandGateway;
         this.queryGateway = queryGateway;
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_ADMIN')") // <-- 2. PROTEGEMOS EL ENDPOINT PARA SOLO ADMIN
+    @PreAuthorize("hasRole('PATIENT_WRITE')")
     public CompletableFuture<String> createPatient(@RequestBody CreatePatientRequest request) {
-
-        // Aquí puedes generar un UUID único para el paciente
         String patientId = java.util.UUID.randomUUID().toString();
 
-        // Crear el comando con los datos del request
         CreatePatientCommand command = CreatePatientCommand.builder()
                 .patientId(patientId)
                 .firstName(request.getFirstName())
@@ -44,14 +41,12 @@ public class PatientControllerAPI {
                 .age(request.getAge())
                 .build();
 
-        // // Enviamos el comando de forma asíncrona a través de Axon
         return commandGateway.send(command);
     }
 
-    // --- 2. IMPLEMENTAMOS EL ENDPOINT GET ---
     @GetMapping
+    @PreAuthorize("hasRole('PATIENT_READ')")
     public CompletableFuture<List<PatientView>> getAllPatients() {
-        // Despachamos la Query al bus de Axon esperando una lista de PatientView
         return queryGateway.query(
                 new FindAllPatientsQuery(),
                 ResponseTypes.multipleInstancesOf(PatientView.class)
