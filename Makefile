@@ -80,6 +80,7 @@ deploy-core: check-context ## Despliega ConfigMaps, Ingress, Frontend y microser
 	kubectl rollout status deployment/frontend -n hashimoto-core --timeout=180s
 
 deploy-ops: check-context ## Despliega Prometheus y Grafana en hashimoto-ops
+	kubectl apply -k grafana/
 	kubectl apply -f k8s/monitoring/prometheus-config.yaml
 	kubectl apply -f k8s/monitoring/prometheus.yaml
 	kubectl apply -f k8s/monitoring/grafana.yaml

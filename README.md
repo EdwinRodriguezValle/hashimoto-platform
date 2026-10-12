@@ -189,5 +189,6 @@ Generated logs are stored under `./logs/` and excluded from Git. Do not use blan
 - [Target application architecture](docs/fullArchitectureHashimoto%20.md)
 - [Kubernetes architecture](docs/k8s-architecture.md)
 - [K3d onboarding](docs/k8s-onboarding.md)
+- [Logs and metrics guide](docs/observability.md)
 - [Keycloak architecture and configuration](docs/keycloak.md)
 - [Keycloak user and role workflow](docs/keycloak-user-workflow.md)

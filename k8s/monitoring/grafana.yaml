@@ -8,6 +8,7 @@ data:
     apiVersion: 1
     datasources:
       - name: Prometheus
+        uid: prometheus
         type: prometheus
         access: proxy
         url: http://prometheus-service.hashimoto-ops.svc.cluster.local:9090
@@ -66,6 +67,9 @@ spec:
             - name: grafana-datasource-config
               mountPath: /etc/grafana/provisioning/datasources
               readOnly: true
+            - name: grafana-dashboard-config
+              mountPath: /etc/grafana/provisioning/dashboards
+              readOnly: true
       volumes:
         - name: grafana-storage
           persistentVolumeClaim:
@@ -73,6 +77,9 @@ spec:
         - name: grafana-datasource-config
           configMap:
             name: grafana-datasource-config
+        - name: grafana-dashboard-config
+          configMap:
+            name: grafana-dashboard-config
 ---
 apiVersion: v1
 kind: Service

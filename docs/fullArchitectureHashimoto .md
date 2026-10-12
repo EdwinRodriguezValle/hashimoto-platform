@@ -92,7 +92,7 @@ The diagram shows the intended product direction, not a claim that every box is 
 | Planned service areas | Not deployed as separate services | Profile, symptoms, reports, medication, appointments, activity, and daily reflection |
 | Connected health data | No Health Connect, HealthKit, or wearable-provider connectors are deployed | Mobile OS health stores plus selected provider cloud APIs through one integration layer |
 | Persistence and events | PostgreSQL and Kafka are deployed for development | Domain-owned data stores and versioned events with clear ownership |
-| Observability | Prometheus, Grafana, Filebeat, Elasticsearch, and Kibana manifests | Add service dashboards, tracing, alerting, and operational ownership |
+| Observability | Prometheus/Grafana starter operations dashboard plus Filebeat/Elasticsearch/Kibana log search | Add service-level dashboards, tracing, alerting, and operational ownership |
 | Analytics and AI | Not deployed | Event-driven analytics and an optional provider-neutral AI integration |
 | Delivery automation | Local Makefile and K3d deployment | CI builds/tests/scans images; Argo CD reconciles approved Kubernetes manifests |
 
@@ -116,6 +116,30 @@ These are candidate service boundaries for the product roadmap. They should be i
 | Daily Reflection | Daily check-ins and reflection entries |
 
 This list is a target map, not an instruction to create eight microservices immediately. Starting with a smaller set of well-bounded services keeps local development and operations manageable.
+
+## Customer-facing charts and operational dashboards
+
+Keep product visualizations separate from platform monitoring:
+
+| Need | Data and tools | Audience |
+| --- | --- | --- |
+| Is the API up? How many requests arrive? Is a service using too much memory? | Prometheus scrapes technical metrics; Grafana presents operational dashboards | Developers and operators |
+| How did this person's symptoms or routines change over time? | Domain records or an authorized, user-scoped analytics/read API; the Hashimoto frontend renders the result | The signed-in customer and, where explicitly authorized, their coach |
+
+Prometheus labels and Grafana dashboards must not contain personal health records or become the customer reporting API. The first customer charts can be simple descriptions of that user's saved entries—such as counts or a trend by day—returned by the owning domain service. Add a separate analytics projection/service only when product needs or query load justify it.
+
+```mermaid
+flowchart LR
+  User[Signed-in customer] --> Web[Hashimoto frontend]
+  Web --> Gateway[API Gateway]
+  Gateway --> ReadAPI[User-scoped domain or insights API]
+  ReadAPI --> Summary[(Domain read model / approved summary)]
+  Summary --> ReadAPI --> Web
+  Services[Application services] -. technical metrics .-> Prometheus[Prometheus]
+  Prometheus --> Grafana[Grafana operations dashboards]
+```
+
+Before returning a chart, enforce ownership/role checks in the backend and retain the time range, units, source, and missing-data context needed to interpret it. If analytics combines multiple sources, preserve provenance and consent boundaries. Present correlations as observations, not proof of cause or medical advice. The planned event-driven insight flow is described in [Future real-time analytics and AI flow](#future-real-time-analytics-and-ai-flow); the first user-visible personal summaries are a later product milestone, not a current feature.
 
 ## Connected health platforms and data ingestion
 
