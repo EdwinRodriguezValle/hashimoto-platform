@@ -12,8 +12,6 @@ spring:
           uri: http://patient-service:8080 # 👈 URL interna de la red de Docker
           predicates:
             - Path=/api/patients/**
-          filters:
-            - TokenRelay=
 
   security:
     oauth2:
@@ -22,6 +20,10 @@ spring:
           # El issuer es la URL pública del realm; el JWKS usa el DNS de Compose por defecto.
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8082/realms/hashimoto-realm}
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs}
+
+app:
+  security:
+    api-audience: ${API_AUDIENCE:api-gateway-client}
 
 
 logging:

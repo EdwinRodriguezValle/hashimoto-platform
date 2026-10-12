@@ -162,6 +162,7 @@ services:
       - LOG_PATH=${LOG_PATH_PATIENT} # 👈 Inyección dinámica limpia
       - KEYCLOAK_ISSUER_URI=http://localhost:8082/realms/hashimoto-realm
       - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+      - API_AUDIENCE=api-gateway-client
     depends_on:
       postgres:
         condition: service_healthy
@@ -186,6 +187,7 @@ services:
       - LOG_PATH=${LOG_PATH_GATEWAY} # 👈 Corregido: ya no pisa a patient-service.log
       - KEYCLOAK_ISSUER_URI=http://localhost:8082/realms/hashimoto-realm
       - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs
+      - API_AUDIENCE=api-gateway-client
     depends_on:
       keycloak:
         condition: service_healthy
