@@ -1,7 +1,7 @@
 import Keycloak from 'keycloak-js';
 
-// Hardcode para K8s en esta rama: el navegador debe usar la misma origin + /auth
-// para que nginx haga el proxy a Keycloak y se evite el CORS.
+// Usa el origen público actual en los tres entornos: Vite/Nginx enruta /auth
+// hacia Keycloak y el navegador mantiene un solo origen durante OIDC.
 const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL || `${window.location.origin}/auth`;
 
 const keycloakConfig = {

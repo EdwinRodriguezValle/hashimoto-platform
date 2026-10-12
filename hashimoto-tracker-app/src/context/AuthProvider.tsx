@@ -1,75 +1,81 @@
-// src/context/AuthProvider.tsx
-
-// src/context/AuthProvider.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import keycloak from '../config/keycloak';
 
 interface AuthContextType {
     authenticated: boolean;
     username: string | undefined;
-    token: string | undefined;
+    canCreatePatients: boolean;
+    login: () => void;
+    register: () => void;
     logout: () => void;
+    getAccessToken: () => Promise<string | undefined>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+let initialization: Promise<boolean> | undefined;
+
+const initializeKeycloak = () => {
+    initialization ??= keycloak.init({
+        onLoad: 'check-sso',
+        checkLoginIframe: false,
+        pkceMethod: 'S256',
+    });
+    return initialization;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isReady, setIsReady] = useState(false);
-    const [authInfo, setAuthInfo] = useState<Omit<AuthContextType, 'logout'>>({
+    const [authInfo, setAuthInfo] = useState({
         authenticated: false,
-        username: undefined,
-        token: undefined,
+        username: undefined as string | undefined,
+        canCreatePatients: false,
     });
 
     useEffect(() => {
-        // Si Keycloak ya fue inicializado o ya está autenticado, evitamos re-inicializar
-        if (keycloak.authenticated !== undefined) {
-            setAuthInfo({
-                authenticated: keycloak.authenticated,
-                username: keycloak.tokenParsed?.preferred_username,
-                token: keycloak.token,
-            });
-            setIsReady(true);
-            return;
-        }
-
-        keycloak.init({
-            onLoad: 'login-required',
-            checkLoginIframe: false,
-            pkceMethod: 'S256',
-            silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-        }).then((authenticated) => {
-            setAuthInfo({
-                authenticated,
-                username: keycloak.tokenParsed?.preferred_username,
-                token: keycloak.token,
-            });
-            setIsReady(true);
-        }).catch((err) => {
-            console.error('❌ Failed to initialize Keycloak:', err);
-            setAuthInfo({
-                authenticated: false,
-                username: undefined,
-                token: undefined,
-            });
-            setIsReady(true);
-        });
+        initializeKeycloak()
+            .then((authenticated) => {
+                setAuthInfo({
+                    authenticated,
+                    username: keycloak.tokenParsed?.preferred_username,
+                    canCreatePatients: keycloak.hasRealmRole('patient-write'),
+                });
+            })
+            .catch((error: unknown) => {
+                console.error('Failed to initialize Keycloak:', error);
+            })
+            .finally(() => setIsReady(true));
     }, []);
 
+    const login = () => {
+        void keycloak.login({ redirectUri: window.location.origin });
+    };
+
+    const register = () => {
+        void keycloak.register({ redirectUri: window.location.origin });
+    };
+
     const logout = () => {
-        keycloak.logout({ redirectUri: window.location.origin });
+        void keycloak.logout({ redirectUri: window.location.origin });
+    };
+
+    const getAccessToken = async () => {
+        if (!keycloak.authenticated) return undefined;
+
+        try {
+            await keycloak.updateToken(30);
+            return keycloak.token;
+        } catch (error) {
+            console.error('Unable to refresh the Keycloak access token:', error);
+            return undefined;
+        }
     };
 
     if (!isReady) {
-        return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-                <h2>Loading Hashimoto Platform Security...</h2>
-            </div>
-        );
+        return <main className="auth-loading" aria-live="polite">Conectando con Hashimoto Identity…</main>;
     }
 
     return (
-        <AuthContext.Provider value={{ ...authInfo, logout }}>
+        <AuthContext.Provider value={{ ...authInfo, login, register, logout, getAccessToken }}>
             {children}
         </AuthContext.Provider>
     );
@@ -77,135 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
+    if (!context) throw new Error('useAuth must be used within an AuthProvider');
     return context;
 };
-
-
-
-
-//
-// import React, { createContext, useContext, useEffect, useState } from 'react';
-// import keycloak from '../config/keycloak';
-//
-// // Definimos qué información compartirá este contexto con toda la app
-// interface AuthContextType {
-//     authenticated: boolean;
-//     username: string | undefined;
-//     token: string | undefined;
-//     logout: () => void;
-// }
-// let isInitialized = false;
-//
-// // TEMPORARY DEV BYPASS: set VITE_AUTH_BYPASS=false to restore Keycloak later.
-// // const DEV_AUTH_BYPASS = import.meta.env.VITE_AUTH_BYPASS !== 'false';
-//
-// const AuthContext = createContext<AuthContextType | null>(null);
-//
-// export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-//     const [isReady, setIsReady] = useState(false);
-//     const [authInfo, setAuthInfo] = useState<Omit<AuthContextType, 'logout'>>({
-//         authenticated: false,
-//         username: undefined,
-//         token: undefined,
-//     });
-//
-//     useEffect(() => {
-//         // TEMPORARY DEV BYPASS: removes the auth stall while Keycloak is unstable.
-//         // if (DEV_AUTH_BYPASS) {
-//         //     setAuthInfo({
-//         //         authenticated: true,
-//         //         username: 'dev-user',
-//         //         token: 'temporary-dev-token',
-//         //     });
-//         //     setIsReady(true);
-//         //     return;
-//         // }
-//
-//         // 💡 Si ya se inició la inicialización, nos saltamos el doble disparo de StrictMode
-//         if (isInitialized) return;
-//         isInitialized = true;
-//
-//         const initializeKeycloak = async (attempt = 0) => {
-//             const maxAttempts = 6;
-//             try {
-//                 const authenticated = await keycloak.init({
-//                     onLoad: 'login-required',
-//                     checkLoginIframe: false,
-//                     pkceMethod: 'S256',
-//                     silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-//                 });
-//
-//                 setAuthInfo({
-//                     authenticated,
-//                     username: keycloak.tokenParsed?.preferred_username,
-//                     token: keycloak.token,
-//                 });
-//
-//                 if (!authenticated) {
-//                     console.info('Keycloak initialized, user not currently authenticated. Redirecting to login...');
-//                     keycloak.login({ redirectUri: window.location.origin });
-//                 }
-//
-//                 setIsReady(true);
-//             } catch (err) {
-//                 if (attempt < maxAttempts) {
-//                     const delayMs = 1000 * (attempt + 1);
-//                     console.warn(`Keycloak not ready yet, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxAttempts})`, err);
-//                     window.setTimeout(() => initializeKeycloak(attempt + 1), delayMs);
-//                     return;
-//                 }
-//
-//                 console.error('❌ Failed to initialize Keycloak after retries:', err);
-//                 isInitialized = false;
-//                 setAuthInfo({
-//                     authenticated: false,
-//                     username: undefined,
-//                     token: undefined,
-//                 });
-//                 setIsReady(true);
-//             }
-//         };
-//
-//         initializeKeycloak();
-//     }, []);
-//
-//     const logout = () => {
-//         // if (DEV_AUTH_BYPASS) {
-//         //     setAuthInfo({
-//         //         authenticated: true,
-//         //         username: 'dev-user',
-//         //         token: 'temporary-dev-token',
-//         //     });
-//         //     return;
-//         // }
-//
-//         keycloak.logout({ redirectUri: window.location.origin });
-//     };
-//
-//     // Mientras Keycloak redirige o valida, mostramos un estado de carga limpio
-//     if (!isReady) {
-//         return (
-//             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-//         <h2>Loading Hashimoto Platform Security...</h2>
-//         </div>
-//     );
-//     }
-//
-//     return (
-//         <AuthContext.Provider value={{ ...authInfo, logout }}>
-//     {children}
-//     </AuthContext.Provider>
-// );
-// };
-//
-// // Hook personalizado para usar la autenticación en cualquier componente con una sola línea
-// export const useAuth = () => {
-//     const context = useContext(AuthContext);
-//     if (!context) {
-//         throw new Error('useAuth must be used within an AuthProvider');
-//     }
-//     return context;
-// };

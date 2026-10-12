@@ -174,7 +174,7 @@ kubectl logs -n hashimoto-core deployment/patient-service --tail=100
 kubectl logs -n hashimoto-infra deployment/keycloak --tail=100
 ```
 
-Abre `http://hashimoto.local:8085/` cuando los targets anteriores terminen correctamente. Inicia sesión con la cuenta administrativa de Keycloak para crear el usuario de desarrollo; sigue [el flujo de usuario y roles](keycloak-user-workflow.md) para preparar `patient-read` y `patient-write`.
+Abre `http://hashimoto.local:8085/` cuando los targets anteriores terminen correctamente. Puedes crear la cuenta desde **Crear cuenta**; luego un administrador debe agregarla al grupo `patient-clerks` para conceder permisos de pacientes. En un realm que ya existía, ejecuta `make keycloak-enable-registration` una vez, porque la importación inicial no sobrescribe realms existentes. Sigue [el flujo de usuario y roles](keycloak-user-workflow.md) para el recorrido completo.
 
 ## 7. Operación diaria
 

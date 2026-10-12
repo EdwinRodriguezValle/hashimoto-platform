@@ -7,7 +7,7 @@
 CLUSTER_NAME ?= hashimoto-cluster
 K3D_AGENTS ?= 2
 
-.PHONY: help cluster-create cluster-use check-context up down deploy-infra deploy-core deploy-ops deploy-logs build-patient build-gateway build-frontend build-all deploy-all
+.PHONY: help cluster-create cluster-use check-context up down deploy-infra deploy-core deploy-ops deploy-logs keycloak-enable-registration build-patient build-gateway build-frontend build-all deploy-all
 
 help: ## Muestra este menú de ayuda con los comandos disponibles
 	@echo "Uso: make [comando]"
@@ -64,11 +64,17 @@ deploy-infra: check-context ## Configura y despliega Postgres, Kafka y Keycloak
 	kubectl apply -k k8s/infra/keycloak/
 	kubectl rollout status deployment/keycloak -n hashimoto-infra --timeout=300s
 
+keycloak-enable-registration: check-context ## Habilita el auto-registro local en un realm Keycloak ya inicializado
+	kubectl exec -n hashimoto-infra deployment/keycloak -- sh -c 'set -e; trap '\''rm -f "$$HOME/.keycloak/kcadm.config"'\'' EXIT; /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD"; /opt/keycloak/bin/kcadm.sh update realms/hashimoto-realm -s registrationAllowed=true'
+
 deploy-core: check-context ## Despliega ConfigMaps, Ingress, Frontend y microservicios
 	kubectl apply -f k8s/core/platform-env.yaml
 	kubectl apply -f k8s/core/patient-service/
 	kubectl apply -f k8s/core/api-gateway/
 	kubectl apply -f k8s/core/frontend/
+	kubectl rollout restart deployment/patient-service -n hashimoto-core
+	kubectl rollout restart deployment/api-gateway -n hashimoto-core
+	kubectl rollout restart deployment/frontend -n hashimoto-core
 	kubectl rollout status deployment/patient-service -n hashimoto-core --timeout=600s
 	kubectl rollout status deployment/api-gateway -n hashimoto-core --timeout=300s
 	kubectl rollout status deployment/frontend -n hashimoto-core --timeout=180s

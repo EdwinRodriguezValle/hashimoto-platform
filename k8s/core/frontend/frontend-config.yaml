@@ -15,8 +15,8 @@ data:
             try_files $uri $uri/ /index.html;
         }
 
-        # TEMPORARY DEV BYPASS: Keycloak disabled while validating the cluster and app routing.
-        # The SPA is served directly; actual API routing goes through the Ingress at /api.
+        # The SPA is served here. Traefik routes /api and /auth to their own
+        # Kubernetes Services, so the browser keeps one origin for OIDC and API calls.
 
         error_page 500 502 503 504 /50x.html;
         location = /50x.html {

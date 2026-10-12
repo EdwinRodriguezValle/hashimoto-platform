@@ -5,7 +5,7 @@ import { createPatientProfile } from '../services/patient/patientService.ts';
 
 
 export const PatientForm: React.FC = () => {
-    const { token } = useAuth();
+    const { getAccessToken } = useAuth();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
@@ -21,6 +21,7 @@ export const PatientForm: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const token = await getAccessToken();
         if (!token) {
             setMessage('❌ Error: No hay un token de Keycloak activo. Inicia sesión nuevamente.');
             return;
@@ -133,10 +134,10 @@ export const PatientForm: React.FC = () => {
 
                 <button
                     type="submit"
-                    disabled={loading || !token}
+                    disabled={loading}
                     style={{ padding: '10px', backgroundColor: '#0288d1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}
                 >
-                    {!token ? 'Waiting for Keycloak Token...' : (loading ? 'Transmitting Data...' : 'Register Patient')}
+                    {loading ? 'Transmitting Data...' : 'Register Patient'}
                 </button>
             </form>
 

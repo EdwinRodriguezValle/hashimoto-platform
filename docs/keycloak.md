@@ -8,6 +8,10 @@ Keycloak proporciona inicio de sesión y emite los tokens de acceso que usan la 
 
 La fuente versionada del realm es [`k8s/infra/keycloak/hashimoto-realm-realm.json`](../k8s/infra/keycloak/hashimoto-realm-realm.json). Contiene el realm `hashimoto-realm`, clientes, scopes, los roles de negocio `patient-read`/`patient-write` y las URI permitidas. El cliente web permite explícitamente las direcciones de desarrollo para `localhost:5173`, `127.0.0.1:5173` y `hashimoto.local:8085`; no utiliza un origen comodín. Sus `rootUrl`, `adminUrl` y `baseUrl` quedan vacíos para que el mismo archivo no dependa de un host concreto.
 
+El auto-registro está habilitado en el realm local. La pantalla inicial de Hashimoto ofrece **Iniciar sesión** y **Crear cuenta**; ambos flujos redirigen al formulario alojado por Keycloak mediante `keycloak-js` y Authorization Code con PKCE. La contraseña no pasa por el API de la plataforma. Keycloak guarda la identidad en `keycloak_db`; esto no crea automáticamente un perfil de paciente en `patient_db`.
+
+Las cuentas auto-registradas no reciben los roles `patient-read` ni `patient-write`. Un administrador debe agregarlas al grupo `patient-clerks` (o conceder roles equivalentes) antes de usar las operaciones de pacientes. El formulario de escritura se oculta sin `patient-write`, y Patient Service vuelve a validar ese permiso en cada petición. Mantén el auto-registro limitado al entorno local; no habilites altas públicas para una instalación empresarial sin un flujo de aprobación, verificación de correo y política de acceso apropiados.
+
 Compose monta ese JSON directamente en `/opt/keycloak/data/import/hashimoto-realm-realm.json`. Kubernetes genera el ConfigMap desde el mismo archivo mediante [`k8s/infra/keycloak/kustomization.yaml`](../k8s/infra/keycloak/kustomization.yaml), y el Deployment monta su contenido en el directorio de importación de Keycloak. El nombre del archivo sigue el formato `<realm>-realm.json` que Keycloak reconoce al importar desde ese directorio.
 
 Al cambiar el JSON, Kustomize genera un ConfigMap con un sufijo derivado del contenido y actualiza la referencia del Deployment. Despliega los cambios con `make deploy-infra` o `kubectl apply -k k8s/infra/keycloak/`.
@@ -42,5 +46,7 @@ La misma separación permite que un token tenga un issuer accesible para el nave
 Las credenciales administrativas provienen de variables de entorno en Compose y de un Secret de Kubernetes. Los valores incluidos en los manifiestos actuales son solo para desarrollo local: no deben reutilizarse ni exponerse en un entorno compartido. Keycloak usa PostgreSQL y la base `keycloak_db`, separada de `patient_db`.
 
 Este despliegue usa `start-dev`, una réplica y configuración local sin TLS. Es apropiado para el aprendizaje y desarrollo en una máquina local, no es un diseño listo para producción.
+
+Si el realm ya existía en la base persistente de Kubernetes, ejecuta `make keycloak-enable-registration` una vez (o habilita **Realm settings** → **Login** → **User registration** → **Save** desde la consola). En Compose, usa la consola. La importación inicial omite realms existentes, por lo que cambiar el JSON por sí solo no actualiza la base actual.
 
 Para practicar el alta de un usuario, su pertenencia a grupos y la verificación del token en la API, sigue el [flujo de usuario y roles](keycloak-user-workflow.md).
