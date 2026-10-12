@@ -17,14 +17,6 @@ spec:
                 name: api-gateway
                 port:
                   number: 8081
-          # 2. 🔥 LA PIEZA QUE FALTABA: Redirige '/auth' hacia Keycloak en infraestructura
-          - path: /auth
-            pathType: Prefix
-            backend:
-              service:
-                name: keycloak.hashimoto-infra.svc.cluster.local
-                port:
-                  number: 8080
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

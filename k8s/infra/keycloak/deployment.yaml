@@ -22,11 +22,13 @@ spec:
           # 👇 ACTUALIZADO: Añadimos el flag oficial de importación al comando de arranque
           command: ["/opt/keycloak/bin/kc.sh", "start-dev", "--import-realm"]
           env:
-            # 🚀 PROXY FIX (Keycloak 24): Obliga a Keycloak a respetar el puerto 80 del Ingress de Nginx
-            - name: KC_PROXY
-              value: "edge"
-            - name: KC_HOSTNAME_STRICT
-              value: "false"
+            # Imagen Keycloak 24: URL externa de discovery y del claim `iss`.
+            - name: KC_HOSTNAME_URL
+              value: "http://hashimoto.local:8085/auth"
+            - name: KC_HTTP_RELATIVE_PATH
+              value: "/auth"
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
             - name: KC_HTTP_ENABLED
               value: "true"
 
@@ -61,13 +63,14 @@ spec:
           ports:
             - containerPort: 8080
               name: http
-          # 👇 NUEVO: Mapeamos el volumen en la carpeta de importación de Keycloak
+          # El ConfigMap generado contiene el realm canónico con el nombre esperado
+          # por el importador de Keycloak: <realm>-realm.json.
           volumeMounts:
             - name: realm-volume
               mountPath: /opt/keycloak/data/import
               readOnly: true
       volumes:
-        # 👇 NUEVO: Declaramos el volumen virtual leyendo desde el ConfigMap
+        # El nombre se reescribe al ConfigMap con hash generado por Kustomize.
         - name: realm-volume
           configMap:
             name: keycloak-realm-config

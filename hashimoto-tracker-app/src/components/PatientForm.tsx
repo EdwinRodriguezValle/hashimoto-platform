@@ -21,9 +21,6 @@ export const PatientForm: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // 🔍 DIAGNÓSTICO CLAVE
-        console.log("Token actual en el formulario:", token);
-
         if (!token) {
             setMessage('❌ Error: No hay un token de Keycloak activo. Inicia sesión nuevamente.');
             return;

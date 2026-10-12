@@ -11,8 +11,8 @@ spring:
       resourceserver:
         jwt:
           # 🔐 REQUERIDO POR TU CLASE SECURITYCONFIG
-          issuer-uri: http://localhost:8082/realms/hashimoto-realm
-          jwk-set-uri: http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8082/realms/hashimoto-realm}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs}
 
 axon:
   kafka:

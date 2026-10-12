@@ -43,12 +43,16 @@ spec:
               value: "kafka-service.hashimoto-infra.svc.cluster.local:9092"
             - name: AXON_KAFKA_BOOTSTRAP_SERVERS
               value: "kafka-service.hashimoto-infra.svc.cluster.local:9092"
-            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
-              value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm"
-            - name: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI
-              value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm/protocol/openid-connect/certs"
-            - name: KEYCLOAK_AUTH_SERVER_URL
-              value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080"
+            - name: KEYCLOAK_ISSUER_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: KEYCLOAK_ISSUER_URI
+            - name: KEYCLOAK_JWK_SET_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: KEYCLOAK_JWK_SET_URI
           resources:
             requests:
               cpu: "500m"

@@ -43,6 +43,12 @@ Los namespaces aíslan nombres y políticas de recursos; no crean por sí solos 
 
 PostgreSQL es una instancia compartida en desarrollo, con una base por servicio: `patient_db` para Patient Service (incluidos Axon y su proyección) y `keycloak_db` para Keycloak. Los nombres se mantienen iguales en Compose, ejecución local y Kubernetes. Ambos usan hoy el usuario PostgreSQL de desarrollo común; separar credenciales/permisos es una mejora posterior.
 
+### Identidad y validación de tokens
+
+Keycloak publica un issuer fijo por escenario; Spring valida la firma usando una URL JWKS alcanzable desde la red de cada backend y comprueba explícitamente el claim `iss`. En Compose el issuer público es `http://localhost:8082/realms/hashimoto-realm`, aunque los contenedores descargan las claves desde `keycloak:8080`. En Kubernetes el navegador usa `http://hashimoto.local:8085/auth`, mientras los pods usan el DNS interno de `keycloak-service` para descargar las claves. En el modo híbrido, los procesos locales usan `localhost:8082` para ambos valores.
+
+El hostname de Keycloak no se infiere de cualquier cabecera entrante: la imagen fijada es Keycloak 24 y Compose/Kubernetes fijan `KC_HOSTNAME_URL`; Kubernetes además sirve su contexto bajo `/auth` y confía en `X-Forwarded-*` del Ingress. El cliente `hashimoto-tracker-web` permite solo los orígenes locales explícitos configurados para Vite/Compose y Kubernetes; no usa origen comodín. Al actualizar Keycloak, revisa la migración de configuración de hostname correspondiente a la nueva versión.
+
 ## Componentes
 
 - **K3d/K3s:** K3d ejecuta nodos K3s como contenedores Docker. Rancher creó K3s; eso no implica que Rancher Manager esté instalado. K3s instala Traefik por defecto salvo que se desactive al crear el clúster.
@@ -51,6 +57,8 @@ PostgreSQL es una instancia compartida en desarrollo, con una base por servicio:
 - **PostgreSQL:** StatefulSet de una réplica con PVC `local-path` de 10 GiB. El script SQL se monta para inicialización.
 - **Kafka:** StatefulSet de una réplica en modo KRaft y PVC de 10 GiB. Una réplica es adecuada para desarrollo, no tolera la pérdida del nodo como un clúster de producción.
 - **Keycloak:** Deployment de una réplica que importa el realm desde ConfigMap y usa PostgreSQL.
+
+El realm tiene una sola fuente JSON compartida con Compose; Kustomize genera el ConfigMap de Kubernetes desde ese archivo. Consulta [Keycloak en los tres escenarios](keycloak.md) para el detalle de issuer, JWKS, rutas y proceso de importación.
 - **Métricas:** Prometheus descubre pods en `hashimoto-core`; Grafana consulta Prometheus. Los manifiestos no declaran datasource ni dashboards de Grafana.
 - **Registros:** Filebeat corre como DaemonSet y lee los logs del nodo; Elasticsearch almacena e indexa y Kibana consulta. Los directorios de logs montados por las aplicaciones son `emptyDir`, pero Filebeat recolecta logs de contenedores desde los nodos.
 
@@ -66,9 +74,8 @@ Antes de usarlo como procedimiento de instalación, hay que resolver o verificar
 
 1. **Variables de infraestructura:** `make deploy-infra` no aplica `k8s/infra/platform-env.yaml`, pero PostgreSQL y Keycloak referencian los ConfigMaps/Secrets que define. Aplicarlo antes de desplegar infraestructura.
 2. **Ingress:** el README raíz habla de desactivar Traefik e instalar Nginx con un archivo remoto incompleto/no versionado; los Ingress de `k8s/` declaran `traefik`. Elegir un controlador, documentar la instalación exacta y alinear clase/anotaciones.
-3. **Backend de `/auth`:** el backend del Ingress apunta a un nombre DNS FQDN como si fuera un Service del mismo namespace. Existe `keycloak-bridge-service`, pero el Ingress no lo usa. La ruta debe apuntar a un Service válido dentro de `hashimoto-core` o definirse con un diseño de Ingress compatible.
-4. **Salida de Filebeat:** `output.elasticsearch.hosts` está configurado como `http://cluster.local`; el Service declarado es `elasticsearch-service` en `hashimoto-logs`, normalmente accesible como `http://elasticsearch-service.hashimoto-logs.svc.cluster.local:9200`.
-5. **Configuración de Prometheus:** `prometheus.yaml` monta el ConfigMap `prometheus-config`, pero `make deploy-ops` aplica `k8s/monitoring/` como directorio; kubectl aplica los YAML del directorio, aunque debe comprobarse que primero se crea el ConfigMap y que el RBAC permite la autodetección esperada. La configuración actual solo filtra por namespace y no muestra relabeling del puerto de métricas.
-6. **Receta del clúster y puertos:** los documentos contienen recetas distintas. `8085:80` y `8443:443` requieren abrir `http://localhost:8085`; `80:80` publica el puerto 80. La receta debe corresponder a la que se elija.
+3. **Salida de Filebeat:** `output.elasticsearch.hosts` está configurado como `http://cluster.local`; el Service declarado es `elasticsearch-service` en `hashimoto-logs`, normalmente accesible como `http://elasticsearch-service.hashimoto-logs.svc.cluster.local:9200`.
+4. **Configuración de Prometheus:** `prometheus.yaml` monta el ConfigMap `prometheus-config`, pero `make deploy-ops` aplica `k8s/monitoring/` como directorio; kubectl aplica los YAML del directorio, aunque debe comprobarse que primero se crea el ConfigMap y que el RBAC permite la autodetección esperada. La configuración actual solo filtra por namespace y no muestra relabeling del puerto de métricas.
+5. **Receta del clúster y puertos:** los documentos contienen recetas distintas. `8085:80` y `8443:443` requieren abrir `http://localhost:8085`; `80:80` publica el puerto 80. La receta debe corresponder a la que se elija.
 
 No se asume que Rancher Manager, Argo CD, Nginx Ingress, cert-manager ni otros operadores estén instalados; no hay manifiestos versionados para ellos en `k8s/`.

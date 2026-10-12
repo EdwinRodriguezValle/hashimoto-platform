@@ -10,6 +10,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.beans.factory.annotation.Value; // 🚀 Requerido
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder; // 🚀 Requerido
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder; // 🚀 Requerido
+import org.springframework.security.oauth2.jwt.JwtValidators;
 
 
 @Configuration
@@ -24,10 +25,15 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
 
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    private String issuerUri;
+
     // 🔒 EL ESCUDO REACTIVO: Lee las llaves en background sin colapsar el arranque
     @Bean
     public ReactiveJwtDecoder reactiveJwtDecoder() {
-        return NimbusReactiveJwtDecoder.withJwkSetUri(this.jwkSetUri).build();
+        NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withJwkSetUri(this.jwkSetUri).build();
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(this.issuerUri));
+        return decoder;
     }
 
     @Bean

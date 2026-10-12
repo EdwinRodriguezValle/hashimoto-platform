@@ -27,9 +27,15 @@ spec:
             - name: APP_SECURITY_DISABLED
               value: "false"
             - name: KEYCLOAK_ISSUER_URI
-              value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm"
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: KEYCLOAK_ISSUER_URI
             - name: KEYCLOAK_JWK_SET_URI
-              value: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/realms/hashimoto-realm/protocol/openid-connect/certs"
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: KEYCLOAK_JWK_SET_URI
 
           livenessProbe:
             httpGet:

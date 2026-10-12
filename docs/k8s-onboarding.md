@@ -44,7 +44,7 @@ kubectl cluster-info
 kubectl get nodes -o wide
 ```
 
-La URL de entrada prevista por esta receta es `http://localhost:8085/`.
+Para que el hostname publicado por Keycloak sea estable, añade `127.0.0.1 hashimoto.local` a `/etc/hosts` (o su equivalente en tu sistema). La URL de entrada de esta receta será `http://hashimoto.local:8085/`; Keycloak estará disponible bajo `/auth`.
 
 ## 3. Crear namespaces y configuración
 
@@ -59,6 +59,22 @@ kubectl apply -f k8s/core/platform-env.yaml
 Los Secrets actuales contienen contraseñas de desarrollo (`123` y `admin`) versionadas en YAML. No uses esos valores fuera de la máquina local. En un entorno compartido, reemplázalos por un mecanismo de secretos apropiado antes de aplicar.
 
 PostgreSQL crea `patient_db` como base inicial y el script de inicialización crea `keycloak_db`. El Patient Service (incluido Axon) usa `patient_db`; Keycloak usa `keycloak_db`. PostgreSQL solo ejecuta esos scripts cuando el directorio de datos está vacío. Si reutilizas un volumen existente, cambiar `POSTGRES_DB` o el SQL no renombra ni crea bases automáticamente: haz una migración explícita o inicia con un volumen nuevo si no necesitas conservar sus datos.
+
+### Contrato de Keycloak por escenario
+
+Los tres escenarios consumen la misma definición de realm; la configuración completa se explica en [Keycloak en Hashimoto Platform](keycloak.md).
+
+Gateway y Patient Service reciben dos variables: `KEYCLOAK_ISSUER_URI` es la URL externa que debe coincidir exactamente con el claim `iss`; `KEYCLOAK_JWK_SET_URI` es el endpoint de claves públicas que el servicio puede alcanzar desde su red.
+
+| Escenario | Issuer | JWKS para los backends |
+| --- | --- | --- |
+| Microservicios en IDE, dependencias en Compose | `http://localhost:8082/realms/hashimoto-realm` | `http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs` |
+| Aplicación completa en Compose | `http://localhost:8082/realms/hashimoto-realm` | `http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs` |
+| Kubernetes local | `http://hashimoto.local:8085/auth/realms/hashimoto-realm` | `http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/auth/realms/hashimoto-realm/protocol/openid-connect/certs` |
+
+La aplicación web usa una ruta relativa `/auth`: Vite la proxifica en modo IDE, el Nginx del frontend en Compose y Traefik hacia el Ingress de Keycloak en Kubernetes. Así el navegador conserva el mismo origen del frontend para sus llamadas OIDC.
+
+Los archivos de realm versionados son configuración inicial. `--import-realm` omite un realm si ya existe en la base de Keycloak; en una base persistente, editar el JSON no sincroniza ni sobrescribe la configuración existente. Para esa situación, cambia el cliente desde la consola/API de administración o planifica una importación offline explícita y respaldada. No borres volúmenes para forzar la importación si contienen datos que quieras conservar.
 
 ## 4. Construir e importar imágenes
 
@@ -107,7 +123,7 @@ kubectl logs -n hashimoto-core deployment/patient-service --tail=100
 kubectl logs -n hashimoto-infra deployment/keycloak --tail=100
 ```
 
-Abre `http://localhost:8085/` cuando los pods de frontend y el controlador de Ingress estén listos. Para acceso directo temporal al frontend, usa:
+Abre `http://hashimoto.local:8085/` cuando los pods de frontend y el controlador de Ingress estén listos. Para acceso directo temporal al frontend, usa:
 
 ```bash
 kubectl port-forward -n hashimoto-core service/frontend-service 8085:80
@@ -130,7 +146,6 @@ Los manifiestos actuales tienen discrepancias que pueden impedir que todo quede 
 
 - Debe aplicarse `k8s/infra/platform-env.yaml` antes de Postgres y Keycloak; el target de Makefile no lo aplica.
 - Los Ingress usan clase Traefik, mientras que una receta antigua del README raíz desactiva Traefik e intenta descargar una definición Nginx desde una URL inválida/no versionada. Decide qué controlador usar y deja una única instalación reproducible.
-- La ruta `/auth` tiene un backend DNS entre namespaces; el Service puente existente no está referenciado por el Ingress.
 - Filebeat apunta a `http://cluster.local`, no al Service de Elasticsearch.
 - `make deploy-ops` instala Prometheus y Grafana, pero no configura datasource/dashboard automáticamente.
 

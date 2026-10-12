@@ -13,6 +13,8 @@ Hashimoto Platform is a microservices-based application for patient profile mana
 
 This document explains how to run the project locally, which URLs are available, how the platform is structured, and how to handle strict Linux file permissions during co-programming.
 
+For the Keycloak setup across hybrid local development, Compose, and Kubernetes, see [Keycloak architecture and configuration](docs/keycloak.md).
+
 ## 1. Overview
 
 The platform is composed of several services:
@@ -120,11 +122,11 @@ cd hashimoto-tracker-app
 npm install
 npm run dev -- --host
 ```
-The dev server is configured with a proxy in `vite.config.ts` that intercepts `/api` calls and routes them to `http://localhost:8081` (API Gateway).
+The dev server proxies `/api` to `http://localhost:8081` (API Gateway) and `/auth` to Keycloak at `http://localhost:8082`.
 
 ## 7. Local Development vs. Docker Profile Strategy
 
-The architecture separates environment properties using Spring Profiles to prevent conflicts regarding token signers and host boundaries.
+The architecture separates environment properties using Spring Profiles and environment variables. Keep the token issuer stable within each environment; configure the JWKS address separately so each backend uses an address reachable from its own network.
 
 ### Local Profile (`application-local.yml`)
 When running from your host machine/IDE:
@@ -136,11 +138,16 @@ When running from your host machine/IDE:
 
 ### Docker Environment (`application.yml` Default)
 When running inside containers:
-- **Keycloak Issuer**: `http://localhost:8082/realms/hashimoto-realm` (Matches the token signed by the physical browser).
-- **Keycloak JWK Set**: `http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs` (Queries Keycloak through the inner bridge network).
+- **Keycloak Issuer**: `http://localhost:8082/realms/hashimoto-realm` (The public issuer included in tokens).
+- **Keycloak JWK Set**: `http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs` (Compose DNS, reachable from backend containers).
 - **PostgreSQL**: `jdbc:postgresql://postgres:5432/patient_db`
 - **Kafka**: `kafka:29092`
 - **Log Path**: `/app/logs/api-gateway.log` or `/app/logs/patient-service.log`
+
+### Kubernetes Local
+- **Keycloak Issuer**: `http://hashimoto.local:8085/auth/realms/hashimoto-realm`
+- **Keycloak JWK Set**: `http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/auth/realms/hashimoto-realm/protocol/openid-connect/certs`
+- Add `127.0.0.1 hashimoto.local` to the host file so the browser reaches the K3d load balancer.
 
 ---
 

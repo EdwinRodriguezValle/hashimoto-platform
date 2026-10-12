@@ -6,6 +6,8 @@ Esta carpeta contiene los manifiestos Kubernetes usados para ejecutar la platafo
 
 - [Arquitectura actual](../docs/k8s-architecture.md): componentes que sí están representados en los manifiestos, flujo de tráfico, namespaces y límites conocidos.
 - [Incorporación de desarrolladores](../docs/k8s-onboarding.md): herramientas, creación del clúster, compilación, despliegue y comprobaciones desde cero.
+- [Keycloak](../docs/keycloak.md): configuración de identidad, realm compartido y diferencias entre los tres escenarios.
+- [Flujo de usuario](../docs/keycloak-user-workflow.md): crear un usuario/grupo y comprobar el token contra la API.
 
 ## Estructura
 
@@ -14,14 +16,14 @@ k8s/
 ├── namespaces.yaml
 ├── core/
 │   ├── platform-env.yaml
-│   ├── api-gateway/       # Gateway, Ingress y puente de nombre a Keycloak
+│   ├── api-gateway/       # Gateway e Ingress de la API
 │   ├── frontend/          # Configuración nginx, Deployment y Service
 │   └── patient-service/   # Deployment y Service
 ├── infra/
 │   ├── platform-env.yaml  # ConfigMap y Secret para la infraestructura
 │   ├── postgres/          # PostgreSQL, volumen e inicialización SQL
 │   ├── kafka/             # Broker KRaft y volumen
-│   └── keycloak/          # IdP y configuración del realm
+│   └── keycloak/          # IdP, realm e Ingress de autenticación
 └── monitoring/
     ├── prometheus*.yaml
     ├── grafana.yaml
@@ -39,7 +41,7 @@ make build-all
 make deploy-all
 ```
 
-`make deploy-all` usa el contexto Kubernetes activo y aplica manifiestos; no instala K3d, kubectl ni un Ingress Controller. La guía de incorporación contiene el procedimiento completo y los problemas que deben revisarse para lograr un despliegue funcional.
+`make deploy-all` usa el contexto Kubernetes activo y aplica manifiestos; no instala K3d, kubectl ni un Ingress Controller. La guía de incorporación contiene el procedimiento completo, incluyendo la entrada local de `hashimoto.local` y los valores de issuer/JWKS.
 
 Para ver el estado:
 

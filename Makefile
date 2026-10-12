@@ -42,7 +42,7 @@ deploy-infra: ## Despliega Postgres, Kafka y Keycloak en hashimoto-infra
 	kubectl apply -f k8s/namespaces.yaml
 	kubectl apply -f k8s/infra/postgres/
 	kubectl apply -f k8s/infra/kafka/
-	kubectl apply -f k8s/infra/keycloak/
+	kubectl apply -k k8s/infra/keycloak/
 
 deploy-core: ## Despliega ConfigMaps, Ingress, Frontend y Microservicios en core
 	kubectl apply -f k8s/core/platform-env.yaml
