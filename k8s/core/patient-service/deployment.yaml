@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: patient-service
-          image: hashimoto/patient-service:latest
+          image: hashimoto/patient-service
           imagePullPolicy: Never
           ports:
             - containerPort: 8080

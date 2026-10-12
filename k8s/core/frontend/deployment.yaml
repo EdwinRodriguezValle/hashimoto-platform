@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: hashimoto/frontend:latest
+          image: hashimoto/frontend
           imagePullPolicy: Never
           # 🚀 EL ESCUDO DE FUERZA: Llama al binario puro de Nginx.
           # Esto apaga los scripts internos de Alpine que hacían explotar el contenedor.

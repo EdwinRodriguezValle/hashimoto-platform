@@ -26,6 +26,8 @@ The symptom, routine, meal, and medication-tracking workflows are still product 
 | **Hybrid development** | Frontend and Java services run on the host; PostgreSQL, Kafka, Keycloak, and observability run in Docker | [Hybrid development](#hybrid-development-local-services--docker-infrastructure) |
 | **Kubernetes on K3d** | The platform runs in the local K3d cluster | [K3d onboarding](docs/k8s-onboarding.md) |
 
+To start GitOps on a new branch, follow [Argo CD local onboarding](docs/argocd-onboarding.md). The initial Argo CD Application manages only `k8s/core`.
+
 Use one mode at a time. Hybrid services and full Compose expose the same host ports, so stop one mode's application processes before starting the other.
 
 ## Quick start: full Docker Compose

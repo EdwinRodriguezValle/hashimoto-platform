@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hashimoto-core
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/EdwinRodriguezValle/hashimoto-platform.git
+    targetRevision: feature/argocd-bootstrap
+    path: k8s/core
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hashimoto-core
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: false

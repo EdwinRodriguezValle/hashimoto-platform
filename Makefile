@@ -6,6 +6,7 @@
 
 CLUSTER_NAME ?= hashimoto-cluster
 K3D_AGENTS ?= 2
+IMAGE_TAG ?= $(shell git rev-parse --short=12 HEAD)
 
 .PHONY: help cluster-create cluster-use check-context up down deploy-infra deploy-core deploy-ops deploy-logs keycloak-enable-registration build-patient build-gateway build-frontend build-all deploy-all
 
@@ -39,17 +40,20 @@ down: ## Apaga el clúster de K3d de forma segura para liberar RAM
 	k3d cluster stop $(CLUSTER_NAME)
 
 # --- COMPILACIÓN E INYECCIÓN DE IMÁGENES (DOCKER + K3D) ---
-build-patient: check-context ## Compila e importa la imagen local de patient-service
-	docker build -t hashimoto/patient-service:latest -f patient-service/Dockerfile .
-	k3d image import hashimoto/patient-service:latest -c $(CLUSTER_NAME)
+build-patient: check-context ## Compila e importa patient-service con la etiqueta IMAGE_TAG
+	python3 scripts/set-k8s-image-tag.py patient-service "$(IMAGE_TAG)"
+	docker build -t hashimoto/patient-service:$(IMAGE_TAG) -f patient-service/Dockerfile .
+	k3d image import hashimoto/patient-service:$(IMAGE_TAG) -c $(CLUSTER_NAME)
 
-build-gateway: check-context ## Compila e importa la imagen local de api-gateway
-	docker build -t hashimoto/api-gateway:latest -f api-gateway/Dockerfile .
-	k3d image import hashimoto/api-gateway:latest -c $(CLUSTER_NAME)
+build-gateway: check-context ## Compila e importa api-gateway con la etiqueta IMAGE_TAG
+	python3 scripts/set-k8s-image-tag.py api-gateway "$(IMAGE_TAG)"
+	docker build -t hashimoto/api-gateway:$(IMAGE_TAG) -f api-gateway/Dockerfile .
+	k3d image import hashimoto/api-gateway:$(IMAGE_TAG) -c $(CLUSTER_NAME)
 
-build-frontend: check-context ## Compila e importa la imagen local del frontend
-	docker build -t hashimoto/frontend:latest -f hashimoto-tracker-app/Dockerfile ./hashimoto-tracker-app
-	k3d image import hashimoto/frontend:latest -c $(CLUSTER_NAME)
+build-frontend: check-context ## Compila e importa frontend con la etiqueta IMAGE_TAG
+	python3 scripts/set-k8s-image-tag.py frontend "$(IMAGE_TAG)"
+	docker build -t hashimoto/frontend:$(IMAGE_TAG) -f hashimoto-tracker-app/Dockerfile ./hashimoto-tracker-app
+	k3d image import hashimoto/frontend:$(IMAGE_TAG) -c $(CLUSTER_NAME)
 
 build-all: build-patient build-gateway build-frontend ## Compila e importa las 3 imágenes de negocio juntas
 
@@ -68,13 +72,7 @@ keycloak-enable-registration: check-context ## Habilita el auto-registro local e
 	kubectl exec -n hashimoto-infra deployment/keycloak -- sh -c 'set -e; trap '\''rm -f "$$HOME/.keycloak/kcadm.config"'\'' EXIT; /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD"; /opt/keycloak/bin/kcadm.sh update realms/hashimoto-realm -s registrationAllowed=true; /opt/keycloak/bin/kcadm.sh update clients/86111e87-c561-49ed-ad4d-74dfc3851c63 -r hashimoto-realm -s '\''redirectUris=["http://localhost:8085/*","http://localhost:5173/*","http://127.0.0.1:5173/*"]'\'' -s '\''webOrigins=["http://localhost:8085","http://localhost:5173","http://127.0.0.1:5173"]'\'''
 
 deploy-core: check-context ## Despliega ConfigMaps, Ingress, Frontend y microservicios
-	kubectl apply -f k8s/core/platform-env.yaml
-	kubectl apply -f k8s/core/patient-service/
-	kubectl apply -f k8s/core/api-gateway/
-	kubectl apply -f k8s/core/frontend/
-	kubectl rollout restart deployment/patient-service -n hashimoto-core
-	kubectl rollout restart deployment/api-gateway -n hashimoto-core
-	kubectl rollout restart deployment/frontend -n hashimoto-core
+	kubectl apply -k k8s/core/
 	kubectl rollout status deployment/patient-service -n hashimoto-core --timeout=600s
 	kubectl rollout status deployment/api-gateway -n hashimoto-core --timeout=300s
 	kubectl rollout status deployment/frontend -n hashimoto-core --timeout=180s

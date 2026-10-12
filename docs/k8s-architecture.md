@@ -57,7 +57,7 @@ See [Keycloak architecture and configuration](keycloak.md) for the detailed comp
 
 - **K3d/K3s:** K3d runs K3s nodes as Docker containers. K3s includes Traefik by default unless it is disabled when the cluster is created. A previous Rancher-created K3s cluster does not imply that Rancher Manager is installed.
 - **Ingress:** Ingress resources route `/` to the frontend, `/api` to the Gateway, and `/auth` to Keycloak. They declare `ingressClassName: traefik`; the active controller must match this class.
-- **Application:** The three application services are single-replica Deployments using local `hashimoto/*:latest` images, built and imported into K3d by the Makefile.
+- **Application:** The three application services are single-replica Deployments using commit-tagged `hashimoto/*` images, built and imported into K3d by the Makefile. `k8s/core/kustomization.yaml` is the declarative source for the image tags and core resources.
 - **PostgreSQL:** A single-replica StatefulSet with a 10 GiB `local-path` PVC. An SQL initialization script is mounted into the container.
 - **Kafka:** A single-replica KRaft StatefulSet with a 10 GiB PVC. One replica is suitable for development but does not tolerate node loss like a production cluster.
 - **Keycloak:** A single-replica Deployment that imports the realm from a ConfigMap and uses PostgreSQL.
@@ -84,6 +84,6 @@ The onboarding guide shows how to add and verify the local host mapping. Support
 
 ## Security and environment limits
 
-The development deployment uses Keycloak `start-dev`, `latest` tags for application images, plaintext development passwords in manifests, Elasticsearch without security, and limited/non-uniform resources. Do not expose this cluster to a public network or reuse these credentials.
+The development deployment uses Keycloak `start-dev`, local-only application images, plaintext development passwords in manifests, Elasticsearch without security, and limited/non-uniform resources. Do not expose this cluster to a public network or reuse these credentials. Argo CD can reconcile the Kustomize manifests once the matching image tags have been built and imported into K3d; it does not build or distribute the images.
 
 The full stack includes PostgreSQL, Kafka, Elasticsearch, Prometheus, Grafana, Kibana, and the application services. Adjust host resources if pods remain `Pending` or are `OOMKilled`. `local-path` stores data inside K3d nodes; deleting the cluster may remove databases, topics, metrics, and logs. This is a local learning environment with development passwords and one replica per component, not a production deployment.

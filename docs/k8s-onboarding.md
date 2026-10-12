@@ -6,11 +6,11 @@ Recommended host resources for the full stack, including observability: 4 CPUs, 
 
 ## 1. Install the tools (Ubuntu 24.04)
 
-Install the required utilities and Docker Engine from Docker's official repository:
+Install the required utilities, Python 3 (used by the image-tag helper), and Docker Engine from Docker's official repository:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl git make gnupg
+sudo apt-get install -y ca-certificates curl git make gnupg python3
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
@@ -128,7 +128,7 @@ From the repository root, run:
 make build-all
 ```
 
-This target builds Patient Service, API Gateway, and the frontend, then imports their images into the K3d nodes. The first run can take time because it downloads base images and Maven/npm dependencies. The Deployments use `imagePullPolicy: Never`, so images must be imported before deploying the application.
+This target builds Patient Service, API Gateway, and the frontend with the same versioned tag, then imports those images into the K3d nodes. By default the tag is the current Git commit SHA; for uncommitted development builds, supply a unique tag such as `make build-all IMAGE_TAG="local-$(date -u +%Y%m%d%H%M%S)"`. Do not reuse a tag for different image contents. Build committed application code when using the SHA-based default. The target also updates `k8s/core/kustomization.yaml`; review and commit that image-tag change so Argo CD can reconcile the exact versions. The first build can take time because it downloads base images and Maven/npm dependencies. The Deployments use `imagePullPolicy: Never`, so the image must be imported before a Kubernetes rollout.
 
 ## 5. Deploy the platform
 
@@ -141,7 +141,7 @@ make deploy-ops
 make deploy-logs
 ```
 
-`make deploy-infra` creates the namespaces, applies `k8s/infra/platform-env.yaml` first, deploys PostgreSQL and waits for `patient_db` and `keycloak_db` to exist, then waits for Kafka, applies the Keycloak realm with Kustomize, and waits for the realm endpoint. `make deploy-core` applies `hashimoto-core` configuration before its services and waits for them to become ready. The final two targets deploy observability (Prometheus/Grafana and Elasticsearch/Kibana/Filebeat); they are optional for testing the business flow.
+`make deploy-infra` creates the namespaces, applies `k8s/infra/platform-env.yaml` first, deploys PostgreSQL and waits for `patient_db` and `keycloak_db` to exist, then waits for Kafka, applies the Keycloak realm with Kustomize, and waits for the realm endpoint. `make deploy-core` applies the `k8s/core` Kustomize build, including the image versions in `k8s/core/kustomization.yaml`, and waits for the services to become ready. The final two targets deploy observability (Prometheus/Grafana and Elasticsearch/Kibana/Filebeat); they are optional for testing the business flow.
 
 To build the images and deploy all four layers with one command:
 
@@ -151,7 +151,7 @@ make deploy-all
 
 Before importing images or applying manifests, the Makefile checks that the active context is `k3d-hashimoto-cluster` to avoid deploying to another cluster by mistake.
 
-Kubernetes Secrets contain development-only passwords (`123` and `admin`). Never use these values outside your local machine.
+Kubernetes Secrets contain development-only passwords (`123` and `admin`). Never use these values outside your local machine. The local image flow imports image tags into K3d; Argo CD will reconcile manifests but will not build or publish images. For a remote cluster, publish versioned images to a registry, enforce tag immutability or deploy by digest, configure image pull credentials, and use a pull policy that permits registry access before switching workloads to it.
 
 PostgreSQL creates `patient_db` as its initial database, and the initialization script creates `keycloak_db`. Patient Service, including Axon, uses `patient_db`; Keycloak uses `keycloak_db`. Initialization scripts run only when the PostgreSQL PVC is empty. Deleting a K3d cluster may delete its persistent data.
 

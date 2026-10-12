@@ -1,4 +1,4 @@
-# El Orquestador punta a una imagen local llamada hashimoto/api-gateway:latest
+# La etiqueta concreta se aplica desde k8s/core/kustomization.yaml.
 #e incluirá también el volumen de logs para evitar el mismo problema que sufrió el servicio de pacientes.
 apiVersion: apps/v1
 kind: Deployment
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: hashimoto/api-gateway:latest
+          image: hashimoto/api-gateway
           imagePullPolicy: Never
           ports:
             - containerPort: 8081
