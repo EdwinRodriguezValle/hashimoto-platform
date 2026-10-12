@@ -2,11 +2,11 @@
 
 ## Propósito
 
-Keycloak proporciona inicio de sesión y emite los tokens de acceso que usan la aplicación web y los servicios protegidos. En el navegador, la aplicación usa OpenID Connect Authorization Code con PKCE. API Gateway y Patient Service validan los JWT: verifican la firma con las claves públicas de Keycloak y comprueban que el `iss` coincida con el issuer esperado.
+Keycloak proporciona inicio de sesión y emite los tokens de acceso que usan la aplicación web y los servicios protegidos. En el navegador, la aplicación usa OpenID Connect Authorization Code con PKCE. API Gateway y Patient Service validan la firma con las claves públicas de Keycloak, el `iss` esperado y la audiencia `api-gateway-client` (`aud`).
 
 ## Una definición del realm para todos los entornos
 
-La fuente versionada del realm es [`k8s/infra/keycloak/hashimoto-realm-realm.json`](../k8s/infra/keycloak/hashimoto-realm-realm.json). Contiene el realm `hashimoto-realm`, clientes, scopes, los roles de negocio `patient-read`/`patient-write` y las URI permitidas. El cliente web permite explícitamente las direcciones de desarrollo para `localhost:5173`, `127.0.0.1:5173` y `hashimoto.local:8085`; no utiliza un origen comodín. Sus `rootUrl`, `adminUrl` y `baseUrl` quedan vacíos para que el mismo archivo no dependa de un host concreto.
+La fuente versionada del realm es [`k8s/infra/keycloak/hashimoto-realm-realm.json`](../k8s/infra/keycloak/hashimoto-realm-realm.json). Contiene el realm `hashimoto-realm`, clientes, scopes, los roles de negocio `patient-read`/`patient-write` y las URI permitidas. El cliente web permite explícitamente las direcciones de desarrollo para `localhost:5173`, `127.0.0.1:5173` y `localhost:8085`; no utiliza un origen comodín. Sus `rootUrl`, `adminUrl` y `baseUrl` quedan vacíos para que el mismo archivo no dependa de un host concreto.
 
 El auto-registro está habilitado en el realm local. La pantalla inicial de Hashimoto ofrece **Iniciar sesión** y **Crear cuenta**; ambos flujos redirigen al formulario alojado por Keycloak mediante `keycloak-js` y Authorization Code con PKCE. La contraseña no pasa por el API de la plataforma. Keycloak guarda la identidad en `keycloak_db`; esto no crea automáticamente un perfil de paciente en `patient_db`.
 
@@ -18,6 +18,18 @@ Al cambiar el JSON, Kustomize genera un ConfigMap con un sufijo derivado del con
 
 La importación de arranque es inicial: `--import-realm` omite un realm que ya existe en la base de datos. Un cambio en el archivo será usado por una instalación nueva; una base persistente requiere modificar el realm con la consola/API de administración o realizar un procedimiento de importación de actualización deliberado y con respaldo. Este comportamiento evita reemplazar estado existente durante cada reinicio ([documentación oficial de importación](https://www.keycloak.org/server/importExport)).
 
+## Clientes y audiencia de la API
+
+`hashimoto-tracker-web` es el cliente público del navegador. Usa Authorization Code con PKCE y no contiene un secreto. El cliente `api-gateway-client` representa el recurso protegido: está configurado como bearer-only, sin redirecciones ni flujos de inicio de sesión. No es una credencial secreta que Gateway usa para inspeccionar tokens.
+
+El mapper `api audience` agrega `api-gateway-client` al claim `aud` del access token emitido al cliente web. Gateway y Patient Service exigen esa audiencia además de firma, emisor y vigencia. Así, un token válido emitido por el mismo realm para otra aplicación no basta para llamar a esta API.
+
+Gateway es un Resource Server. Valida el Bearer token de la petición y reenvía la cabecera `Authorization` a Patient Service; no obtiene un token nuevo como cliente OAuth. Por eso la ruta no usa `TokenRelay` ni requiere el starter OAuth2 Client. Patient Service vuelve a validar el token y aplica los roles `patient-read` y `patient-write` en cada operación.
+
+`API_AUDIENCE` configura el valor esperado en ambos backends y está fijado a `api-gateway-client` en Compose y Kubernetes. Al cambiar la audiencia, debe coincidir en el mapper de Keycloak, ambos backends y las variables del entorno.
+
+En un realm persistente ya inicializado, importar este JSON al arrancar no actualiza el cliente ni el mapper. En Keycloak, configura `api-gateway-client` como bearer-only (sin Standard flow, redirecciones, orígenes ni cliente público), y en **Clients** → `hashimoto-tracker-web` → **Client scopes**/mappers agrega un mapper de tipo **Audience** con `api-gateway-client` como audiencia incluida, añadido al access token y no al ID token. Comprueba que un access token nuevo contenga `api-gateway-client` en `aud`; después reconstruye y despliega Gateway y Patient Service.
+
 ## Tres escenarios de desarrollo
 
 El issuer es una URL pública que debe coincidir exactamente con el claim `iss` del token. La URL JWKS es la dirección desde la que cada proceso backend alcanza las claves públicas; puede variar con la red sin cambiar el issuer.
@@ -26,11 +38,11 @@ El issuer es una URL pública que debe coincidir exactamente con el claim `iss` 
 | --- | --- | --- |
 | Híbrido: servicios Java locales y dependencias en Compose | `http://localhost:8082/realms/hashimoto-realm` | `http://localhost:8082/realms/hashimoto-realm/protocol/openid-connect/certs` |
 | Todo en Compose | `http://localhost:8082/realms/hashimoto-realm` | `http://keycloak:8080/realms/hashimoto-realm/protocol/openid-connect/certs` |
-| Kubernetes local en K3d | `http://hashimoto.local:8085/auth/realms/hashimoto-realm` | `http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/auth/realms/hashimoto-realm/protocol/openid-connect/certs` |
+| Kubernetes local en K3d | `http://localhost:8085/auth/realms/hashimoto-realm` | `http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/auth/realms/hashimoto-realm/protocol/openid-connect/certs` |
 
-La web llama a Keycloak mediante la ruta relativa `/auth`. En modo IDE, Vite la reenvía a Keycloak en Compose; el Nginx de la imagen web hace el proxy en el escenario Compose completo; y en K3d Traefik enruta esa ruta al Ingress de Keycloak. Para Kubernetes, añade `127.0.0.1 hashimoto.local` a `/etc/hosts` y publica el puerto 8085 del balanceador K3d.
+La web llama a Keycloak mediante la ruta relativa `/auth`. En modo IDE, Vite la reenvía a Keycloak en Compose; el Nginx de la imagen web hace el proxy en el escenario Compose completo; y en K3d Traefik enruta esa ruta al Ingress de Keycloak. Para Kubernetes, abre la web desde `http://localhost:8085`; así el navegador considera seguro el origen local y habilita Web Crypto para PKCE. K3d publica el puerto 8085 en el balanceador.
 
-La configuración de hostname también cambia por entorno. Compose publica el servicio en `localhost:8082`. En Kubernetes, Keycloak sirve bajo `/auth`, publica `http://hashimoto.local:8085/auth` y confía en las cabeceras `X-Forwarded-*` del Ingress. La versión de la imagen actualmente fijada es Keycloak 24; al actualizarla se deben revisar los nombres y el comportamiento de las opciones de hostname/proxy para esa versión. La [guía oficial de proxy inverso](https://www.keycloak.org/server/reverseproxy) describe el manejo de las cabeceras reenviadas.
+La configuración de hostname también cambia por entorno. Compose publica el servicio en `localhost:8082`. En Kubernetes, Keycloak sirve bajo `/auth`, publica `http://localhost:8085/auth` y confía en las cabeceras `X-Forwarded-*` del Ingress. La versión de la imagen actualmente fijada es Keycloak 24; al actualizarla se deben revisar los nombres y el comportamiento de las opciones de hostname/proxy para esa versión. La [guía oficial de proxy inverso](https://www.keycloak.org/server/reverseproxy) describe el manejo de las cabeceras reenviadas.
 
 ## Variables de backend
 

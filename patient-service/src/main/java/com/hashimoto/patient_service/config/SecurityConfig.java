@@ -11,6 +11,11 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.oauth2.jwt.JwtDecoder; // 👈 Importante
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder; // 👈 Importante
 import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -30,11 +35,20 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String issuerUri;
 
+    @Value("${app.security.api-audience:api-gateway-client}")
+    private String apiAudience;
+
     // 🔒 UNIFICADO: Este decodificador lee localmente la firma del token sin validar HTTP en el arranque
     @Bean
     public JwtDecoder jwtDecoder() {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(this.jwkSetUri).build();
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(this.issuerUri));
+        OAuth2TokenValidator<Jwt> audienceValidator = jwt -> jwt.getAudience() != null
+                && jwt.getAudience().contains(this.apiAudience)
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(new OAuth2Error(
+                        "invalid_token", "Token is not intended for this API", null));
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(this.issuerUri), audienceValidator));
         return decoder;
     }
 

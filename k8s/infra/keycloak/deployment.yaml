@@ -24,7 +24,7 @@ spec:
           env:
             # Imagen Keycloak 24: URL externa de discovery y del claim `iss`.
             - name: KC_HOSTNAME_URL
-              value: "http://hashimoto.local:8085/auth"
+              value: "http://localhost:8085/auth"
             - name: KC_HTTP_RELATIVE_PATH
               value: "/auth"
             - name: KC_PROXY_HEADERS

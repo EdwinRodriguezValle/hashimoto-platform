@@ -7,7 +7,7 @@ data:
   default.conf: |
     server {
         listen 80;
-        server_name hashimoto.local hashimoto;
+        server_name localhost hashimoto.local hashimoto;
 
         location / {
             root /usr/share/nginx/html;

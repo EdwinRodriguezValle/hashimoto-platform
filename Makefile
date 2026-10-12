@@ -65,7 +65,7 @@ deploy-infra: check-context ## Configura y despliega Postgres, Kafka y Keycloak
 	kubectl rollout status deployment/keycloak -n hashimoto-infra --timeout=300s
 
 keycloak-enable-registration: check-context ## Habilita el auto-registro local en un realm Keycloak ya inicializado
-	kubectl exec -n hashimoto-infra deployment/keycloak -- sh -c 'set -e; trap '\''rm -f "$$HOME/.keycloak/kcadm.config"'\'' EXIT; /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD"; /opt/keycloak/bin/kcadm.sh update realms/hashimoto-realm -s registrationAllowed=true'
+	kubectl exec -n hashimoto-infra deployment/keycloak -- sh -c 'set -e; trap '\''rm -f "$$HOME/.keycloak/kcadm.config"'\'' EXIT; /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/auth --realm master --user "$$KEYCLOAK_ADMIN" --password "$$KEYCLOAK_ADMIN_PASSWORD"; /opt/keycloak/bin/kcadm.sh update realms/hashimoto-realm -s registrationAllowed=true; /opt/keycloak/bin/kcadm.sh update clients/86111e87-c561-49ed-ad4d-74dfc3851c63 -r hashimoto-realm -s '\''redirectUris=["http://localhost:8085/*","http://localhost:5173/*","http://127.0.0.1:5173/*"]'\'' -s '\''webOrigins=["http://localhost:8085","http://localhost:5173","http://127.0.0.1:5173"]'\'''
 
 deploy-core: check-context ## Despliega ConfigMaps, Ingress, Frontend y microservicios
 	kubectl apply -f k8s/core/platform-env.yaml

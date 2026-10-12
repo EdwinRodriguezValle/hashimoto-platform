@@ -84,12 +84,6 @@ sudo sysctl --system
 sysctl vm.max_map_count
 ```
 
-Añade el hostname local de la aplicación:
-
-```bash
-grep -qE '(^|[[:space:]])hashimoto\.local([[:space:]]|$)' /etc/hosts || echo '127.0.0.1 hashimoto.local' | sudo tee -a /etc/hosts
-```
-
 ## 3. Crear el clúster local
 
 Comprueba que no hay un clúster previo con ese nombre y créalo con el target del Makefile:
@@ -159,9 +153,9 @@ kubectl get events -A --sort-by=.lastTimestamp
 Confirma las entradas HTTP de frontend, API y Keycloak:
 
 ```bash
-curl --fail --silent --show-error --output /dev/null --write-out 'frontend %{http_code}\n' http://hashimoto.local:8085/
-curl --fail --silent --show-error --output /dev/null --write-out 'realm %{http_code}\n' http://hashimoto.local:8085/auth/realms/hashimoto-realm
-curl --silent --output /dev/null --write-out 'API sin token %{http_code}\n' http://hashimoto.local:8085/api/patients
+curl --fail --silent --show-error --output /dev/null --write-out 'frontend %{http_code}\n' http://localhost:8085/
+curl --fail --silent --show-error --output /dev/null --write-out 'realm %{http_code}\n' http://localhost:8085/auth/realms/hashimoto-realm
+curl --silent --output /dev/null --write-out 'API sin token %{http_code}\n' http://localhost:8085/api/patients
 ```
 
 Frontend y realm deben devolver `200`; la API sin token debe devolver `401`. Después inicia sesión y verifica el flujo con [el usuario de desarrollo](keycloak-user-workflow.md).
@@ -174,7 +168,7 @@ kubectl logs -n hashimoto-core deployment/patient-service --tail=100
 kubectl logs -n hashimoto-infra deployment/keycloak --tail=100
 ```
 
-Abre `http://hashimoto.local:8085/` cuando los targets anteriores terminen correctamente. Puedes crear la cuenta desde **Crear cuenta**; luego un administrador debe agregarla al grupo `patient-clerks` para conceder permisos de pacientes. En un realm que ya existía, ejecuta `make keycloak-enable-registration` una vez, porque la importación inicial no sobrescribe realms existentes. Sigue [el flujo de usuario y roles](keycloak-user-workflow.md) para el recorrido completo.
+Abre `http://localhost:8085/` cuando los targets anteriores terminen correctamente. Se usa `localhost` porque el navegador permite Web Crypto en ese contexto local, requerido por PKCE en el cliente OIDC. Puedes crear la cuenta desde **Crear cuenta**; luego un administrador debe agregarla al grupo `patient-clerks` para conceder permisos de pacientes. En un realm que ya existía, ejecuta `make keycloak-enable-registration` una vez para actualizar el registro y el origen permitido del cliente. Sigue [el flujo de usuario y roles](keycloak-user-workflow.md) para el recorrido completo.
 
 ## 7. Operación diaria
 

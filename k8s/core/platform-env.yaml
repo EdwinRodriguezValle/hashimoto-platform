@@ -10,8 +10,9 @@ metadata:
 data:
   DB_NAME: "patient_db"
   DB_USER: "postgres"
-  KEYCLOAK_ISSUER_URI: "http://hashimoto.local:8085/auth/realms/hashimoto-realm"
+  KEYCLOAK_ISSUER_URI: "http://localhost:8085/auth/realms/hashimoto-realm"
   KEYCLOAK_JWK_SET_URI: "http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/auth/realms/hashimoto-realm/protocol/openid-connect/certs"
+  API_AUDIENCE: "api-gateway-client"
 ---
 apiVersion: v1
 kind: Secret

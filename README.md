@@ -145,9 +145,9 @@ When running inside containers:
 - **Log Path**: `/app/logs/api-gateway.log` or `/app/logs/patient-service.log`
 
 ### Kubernetes Local
-- **Keycloak Issuer**: `http://hashimoto.local:8085/auth/realms/hashimoto-realm`
+- **Keycloak Issuer**: `http://localhost:8085/auth/realms/hashimoto-realm`
 - **Keycloak JWK Set**: `http://keycloak-service.hashimoto-infra.svc.cluster.local:8080/auth/realms/hashimoto-realm/protocol/openid-connect/certs`
-- Add `127.0.0.1 hashimoto.local` to the host file so the browser reaches the K3d load balancer.
+- Open the application at `http://localhost:8085/`. Using `localhost` keeps the browser in a secure context for Web Crypto and OIDC PKCE.
 
 ---
 

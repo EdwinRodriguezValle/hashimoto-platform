@@ -18,9 +18,9 @@ Elige el entorno que ya estés usando y asegúrate de que Keycloak, API Gateway,
 | Entorno | Consola de administración | Aplicación |
 | --- | --- | --- |
 | Local híbrido o Compose | `http://localhost:8082/admin/` | `http://localhost:5173/` (híbrido) o `http://localhost:5173/` (Compose) |
-| Kubernetes local | `http://hashimoto.local:8085/auth/admin/` | `http://hashimoto.local:8085/` |
+| Kubernetes local | `http://localhost:8085/auth/admin/` | `http://localhost:8085/` |
 
-En Kubernetes, el nombre `hashimoto.local` debe apuntar a `127.0.0.1` en el archivo hosts del sistema. Inicia sesión en la consola con la cuenta administrativa configurada para tu entorno; cambia a `hashimoto-realm` desde el selector de realms antes de gestionar identidades de la aplicación.
+En Kubernetes se usa `localhost` para que el navegador habilite Web Crypto, que Keycloak JS necesita para PKCE. Inicia sesión en la consola con la cuenta administrativa configurada para tu entorno; cambia a `hashimoto-realm` desde el selector de realms antes de gestionar identidades de la aplicación.
 
 ## 2. Crear permisos para el ejemplo
 
@@ -51,11 +51,11 @@ No habilites Direct Access Grants para este flujo. El cliente `hashimoto-tracker
 3. Comprueba que la petición lleva `Authorization: Bearer …` y que la respuesta HTTP es satisfactoria. No compartas el header ni copies el token a tickets o capturas.
 4. En la consola de Keycloak, abre el usuario y confirma que pertenece a `patient-clerks`. La identidad y los roles son de Keycloak; el registro del paciente se procesa en Patient Service y su almacenamiento/eventos.
 
-Para inspeccionar el payload localmente, puedes copiar el access token solo en tu sesión local y decodificar la parte central del JWT. Un JWT firmado está codificado, no cifrado: no publiques el token ni uses decodificadores web externos para datos reales. Deben aparecer `iss`, `sub`, `preferred_username` y `realm_access.roles` (incluidos los roles heredados del grupo). El backend valida firma y issuer; no confía en que el cliente web decida los permisos.
+Para inspeccionar el payload localmente, puedes copiar el access token solo en tu sesión local y decodificar la parte central del JWT. Un JWT firmado está codificado, no cifrado: no publiques el token ni uses decodificadores web externos para datos reales. Deben aparecer `iss`, `sub`, `preferred_username`, `aud` con `api-gateway-client` y `realm_access.roles` (incluidos los roles heredados del grupo). El backend valida firma, issuer y audiencia; no confía en que el cliente web decida los permisos.
 
 ## 5. Qué autorización hace hoy la aplicación
 
-Gateway exige un token válido para las rutas protegidas. Patient Service valida el token y convierte los roles de `realm_access.roles` a autoridades de Spring (por ejemplo, `patient-read` pasa a `ROLE_PATIENT_READ`). El controlador aplica `PATIENT_READ` a `GET /api/patients` y `PATIENT_WRITE` a `POST /api/patients` mediante `@PreAuthorize`.
+Gateway exige un token cuya firma, issuer y audiencia sean válidos para las rutas protegidas. Reenvía la cabecera Bearer a Patient Service, que repite esas validaciones y convierte los roles de `realm_access.roles` a autoridades de Spring (por ejemplo, `patient-read` pasa a `ROLE_PATIENT_READ`). El controlador aplica `PATIENT_READ` a `GET /api/patients` y `PATIENT_WRITE` a `POST /api/patients` mediante `@PreAuthorize`.
 
 En el JSON versionado del realm, `registrationAllowed` está activado para el laboratorio local. En Kubernetes, `make keycloak-enable-registration` aplica el ajuste a una base que ya tenía el realm creado (la importación inicial no sobreescribe realms existentes). También se puede activar desde **Realm settings** → **Login** → **User registration**. En Compose, usa esa opción de la consola en `http://localhost:8082/admin/` si la base ya se había inicializado. La base de datos no se modifica al cambiar el JSON.
 
@@ -70,7 +70,7 @@ Para reiniciar el ejercicio, elimina el usuario o grupo desde la consola. No eli
 ## Diagnóstico rápido
 
 - **No puedes iniciar sesión:** confirma que el usuario está habilitado, que la contraseña no está pendiente de cambio y que elegiste el realm `hashimoto-realm`.
-- **HTTP 401:** token ausente, vencido o issuer no coincidente. Revisa el issuer del entorno en `docs/keycloak.md` y los logs de Gateway/Patient Service.
+- **HTTP 401:** token ausente, vencido, issuer no coincidente o sin la audiencia `api-gateway-client`. Revisa el mapper del cliente web, `API_AUDIENCE` y los logs de Gateway/Patient Service.
 - **No aparecen roles en el token:** revisa la asignación del grupo al usuario y de roles al grupo; asegúrate de inspeccionar el access token del cliente web.
 - **HTTP 403:** el token es válido, pero le falta `patient-read` para GET o `patient-write` para POST; revisa asignación de roles y vuelve a iniciar sesión para obtener un token actualizado.
 

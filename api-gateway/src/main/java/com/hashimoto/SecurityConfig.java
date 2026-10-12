@@ -11,6 +11,11 @@ import org.springframework.beans.factory.annotation.Value; // 🚀 Requerido
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder; // 🚀 Requerido
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder; // 🚀 Requerido
 import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.DelegatingOAuth2TokenValidator;
 
 
 @Configuration
@@ -28,11 +33,20 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String issuerUri;
 
+    @Value("${app.security.api-audience:api-gateway-client}")
+    private String apiAudience;
+
     // 🔒 EL ESCUDO REACTIVO: Lee las llaves en background sin colapsar el arranque
     @Bean
     public ReactiveJwtDecoder reactiveJwtDecoder() {
         NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder.withJwkSetUri(this.jwkSetUri).build();
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(this.issuerUri));
+        OAuth2TokenValidator<Jwt> audienceValidator = jwt -> jwt.getAudience() != null
+                && jwt.getAudience().contains(this.apiAudience)
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(new OAuth2Error(
+                        "invalid_token", "Token is not intended for this API", null));
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(this.issuerUri), audienceValidator));
         return decoder;
     }
 
