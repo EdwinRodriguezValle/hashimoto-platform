@@ -53,15 +53,6 @@ public class SecurityConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE) // 👈 Forzar a que esta regla se evalúe de primero
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
-//        if (this.securityDisabled) {
-//            // TEMPORARY DEV BYPASS: removes Keycloak from the local path while debugging the platform.
-//            http
-//                    .csrf(ServerHttpSecurity.CsrfSpec::disable)
-//                    .authorizeExchange(exchanges -> exchanges
-//                            .pathMatchers("/**").permitAll()
-//                    );
-//            return http.build();
-//        }
 
         http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -73,8 +64,6 @@ public class SecurityConfig {
                         // 🚀 CORREGIDO: Le forzamos a usar nuestro escudo decodificador
                         .jwt(jwt -> jwt.jwtDecoder(reactiveJwtDecoder()))
                 );
-
-//               .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}));
 
         return http.build();
     }

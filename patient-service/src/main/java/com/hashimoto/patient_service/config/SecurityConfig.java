@@ -23,7 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @EnableMethodSecurity // 👈 Habilita el uso de @PreAuthorize en tus controladores o servicios
 public class SecurityConfig {
-
+//This need to be cleaned up
     // TEMPORARY DEV BYPASS: set app.security.disabled=false to restore Keycloak later.
     //@Value("${app.security.disabled:true}")
 //    private boolean securityDisabled;
