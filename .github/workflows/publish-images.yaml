@@ -35,7 +35,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # ⚙️ Convierte "EdwinRodriguezValle" a "edwinrodriguezvalle" de forma segura para Docker
-      - name: Formatear variables en minúsculas
+      - name: It changes the owner to lowercase for Docker tags
         id: format_env
         run: |
           echo "owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
