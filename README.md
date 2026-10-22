@@ -155,6 +155,8 @@ Open [http://localhost:5173/](http://localhost:5173/). Vite proxies `/api` to th
 
 The K3d manifests deploy the current application and infrastructure to a local Kubernetes cluster. Follow the maintained [K3d onboarding guide](docs/k8s-onboarding.md) for host requirements, the `hashimoto.local` host mapping, cluster creation, image builds/imports, deployment order, and checks. Use `http://localhost:8085/` as the browser URL for the Kubernetes OIDC flow.
 
+For the GitOps workflow, GitHub Actions builds versioned images and Argo CD reconciles the manifests into the local K3d cluster. The cluster stays on your machine; no always-on application server is needed. Follow [GitOps with Argo CD on local K3d](docs/gitops-k3d.md) and the [hashimoto-manifests setup guide](https://github.com/EdwinRodriguezValle/hashimoto-manifests#local-k3d-setup).
+
 Read [Kubernetes architecture](docs/k8s-architecture.md) for namespaces, services, storage, ingress, and Kafka networking. Read [Keycloak architecture and configuration](docs/keycloak.md) for issuer/JWKS URLs and identity setup across Compose, hybrid, and Kubernetes.
 
 ## Security and data boundaries
@@ -189,6 +191,7 @@ Generated logs are stored under `./logs/` and excluded from Git. Do not use blan
 - [Target application architecture](docs/fullArchitectureHashimoto%20.md)
 - [Kubernetes architecture](docs/k8s-architecture.md)
 - [K3d onboarding](docs/k8s-onboarding.md)
+- [GitOps with Argo CD on local K3d](docs/gitops-k3d.md)
 - [Logs and metrics guide](docs/observability.md)
 - [Keycloak architecture and configuration](docs/keycloak.md)
 - [Keycloak user and role workflow](docs/keycloak-user-workflow.md)
