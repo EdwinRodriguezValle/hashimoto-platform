@@ -7,6 +7,9 @@
 CLUSTER_NAME ?= hashimoto-cluster
 K3D_AGENTS ?= 2
 IMAGE_TAG ?= $(shell git rev-parse --short=12 HEAD)
+IMAGE_REGISTRY ?= ghcr.io
+IMAGE_OWNER ?= edwinrodriguezvalle
+IMAGE_PREFIX ?= $(IMAGE_REGISTRY)/$(IMAGE_OWNER)
 
 .PHONY: help cluster-create cluster-use check-context up down deploy-infra deploy-core deploy-ops deploy-logs keycloak-enable-registration build-patient build-gateway build-frontend build-all deploy-all
 
@@ -42,18 +45,18 @@ down: ## Apaga el clúster de K3d de forma segura para liberar RAM
 # --- COMPILACIÓN E INYECCIÓN DE IMÁGENES (DOCKER + K3D) ---
 build-patient: check-context ## Compila e importa patient-service con la etiqueta IMAGE_TAG
 	python3 scripts/set-k8s-image-tag.py patient-service "$(IMAGE_TAG)"
-	docker build -t hashimoto/patient-service:$(IMAGE_TAG) -f patient-service/Dockerfile .
-	k3d image import hashimoto/patient-service:$(IMAGE_TAG) -c $(CLUSTER_NAME)
+	docker build -t $(IMAGE_PREFIX)/patient-service:$(IMAGE_TAG) -f patient-service/Dockerfile .
+	k3d image import $(IMAGE_PREFIX)/patient-service:$(IMAGE_TAG) -c $(CLUSTER_NAME)
 
 build-gateway: check-context ## Compila e importa api-gateway con la etiqueta IMAGE_TAG
 	python3 scripts/set-k8s-image-tag.py api-gateway "$(IMAGE_TAG)"
-	docker build -t hashimoto/api-gateway:$(IMAGE_TAG) -f api-gateway/Dockerfile .
-	k3d image import hashimoto/api-gateway:$(IMAGE_TAG) -c $(CLUSTER_NAME)
+	docker build -t $(IMAGE_PREFIX)/api-gateway:$(IMAGE_TAG) -f api-gateway/Dockerfile .
+	k3d image import $(IMAGE_PREFIX)/api-gateway:$(IMAGE_TAG) -c $(CLUSTER_NAME)
 
 build-frontend: check-context ## Compila e importa frontend con la etiqueta IMAGE_TAG
 	python3 scripts/set-k8s-image-tag.py frontend "$(IMAGE_TAG)"
-	docker build -t hashimoto/frontend:$(IMAGE_TAG) -f hashimoto-tracker-app/Dockerfile ./hashimoto-tracker-app
-	k3d image import hashimoto/frontend:$(IMAGE_TAG) -c $(CLUSTER_NAME)
+	docker build -t $(IMAGE_PREFIX)/hashimoto-frontend:$(IMAGE_TAG) -f hashimoto-tracker-app/Dockerfile ./hashimoto-tracker-app
+	k3d image import $(IMAGE_PREFIX)/hashimoto-frontend:$(IMAGE_TAG) -c $(CLUSTER_NAME)
 
 build-all: build-patient build-gateway build-frontend ## Compila e importa las 3 imágenes de negocio juntas
 
