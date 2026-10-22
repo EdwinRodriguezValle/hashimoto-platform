@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespaces.yaml
+  - infra/platform-env.yaml
+  - infra/postgres/init-config.yaml
+  - infra/postgres/pvc.yaml
+  - infra/postgres/service.yaml
+  - infra/postgres/statefulset.yaml
+  - infra/kafka/pvc.yaml
+  - infra/kafka/service.yaml
+  - infra/kafka/statefulset.yaml
+  - infra/keycloak
+  - core
+  - monitoring/grafana.yaml
+  - monitoring/prometheus-config.yaml
+  - monitoring/prometheus.yaml
+  - monitoring/logging/elasticsearch.yaml
+  - monitoring/logging/filebeat-config.yaml
+  - monitoring/logging/filebeat.yaml
+  - monitoring/logging/kibana.yml

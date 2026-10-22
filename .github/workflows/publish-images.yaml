@@ -1,0 +1,94 @@
+name: Publish OCI Images to GHCR
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (to emulate architecture if required)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Autenticate in GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ⚙️ Convierte "EdwinRodriguezValle" a "edwinrodriguezvalle" de forma segura para Docker
+      - name: It changes the owner to lowercase for Docker tags
+        id: format_env
+        run: |
+          echo "owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short=12 HEAD)" >> $GITHUB_OUTPUT
+
+      # --- 1. CONSTRUCCIÓN DEL FRONTEND ---
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./hashimoto-tracker-app
+          file: ./hashimoto-tracker-app/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.format_env.outputs.owner_lc }}/hashimoto-frontend:${{ steps.format_env.outputs.sha_short }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # --- 2. CONSTRUCCIÓN DEL API GATEWAY ---
+      - name: Build & Push API Gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./api-gateway/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.format_env.outputs.owner_lc }}/api-gateway:${{ steps.format_env.outputs.sha_short }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # --- 3. CONSTRUCCIÓN DEL PATIENT SERVICE ---
+      - name: Build & Push Patient Service
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./patient-service/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.format_env.outputs.owner_lc }}/patient-service:${{ steps.format_env.outputs.sha_short }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update Kubernetes image tags
+        run: |
+          python3 scripts/set-k8s-image-tag.py frontend "${{ steps.format_env.outputs.sha_short }}"
+          python3 scripts/set-k8s-image-tag.py api-gateway "${{ steps.format_env.outputs.sha_short }}"
+          python3 scripts/set-k8s-image-tag.py patient-service "${{ steps.format_env.outputs.sha_short }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/core/kustomization.yaml
+          if git diff --cached --quiet; then
+            echo "Image tags already match this revision."
+          else
+            git commit -m "chore(deploy): update images to ${{ steps.format_env.outputs.sha_short }}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

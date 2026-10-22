@@ -1,0 +1,33 @@
+  name: Frontend CI
+
+  on:
+    pull_request:
+      paths:
+        - 'hashimoto-tracker-app/**'
+        - '.github/workflows/frontend-ci.yaml'
+
+  jobs:
+    validate-frontend:
+      runs-on: ubuntu-24.04
+      steps:
+        - name: Code checkout
+          uses: actions/checkout@v4
+
+        - name: Configure Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '20.20.0'
+            cache: 'npm'
+            cache-dependency-path: 'hashimoto-tracker-app/package-lock.json'
+
+        - name: Install Dependencies
+          run: npm ci
+          working-directory: ./hashimoto-tracker-app
+
+        - name: Run Linter
+          run: npm run lint
+          working-directory: ./hashimoto-tracker-app
+
+        - name: Compilation test
+          run: npm run build
+          working-directory: ./hashimoto-tracker-app

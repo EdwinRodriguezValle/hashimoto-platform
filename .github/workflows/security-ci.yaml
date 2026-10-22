@@ -1,0 +1,20 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [ main, master, feature/devops_argocd ]
+
+jobs:
+  secret-scan:
+    name: Gitleaks Secret Scanner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necesario para que Gitleaks revise el historial de commits
+
+      - name: Ejecutar Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

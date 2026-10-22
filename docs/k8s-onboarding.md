@@ -128,7 +128,7 @@ From the repository root, run:
 make build-all
 ```
 
-This target builds Patient Service, API Gateway, and the frontend with the same versioned tag, then imports those images into the K3d nodes. By default the tag is the current Git commit SHA; for uncommitted development builds, supply a unique tag such as `make build-all IMAGE_TAG="local-$(date -u +%Y%m%d%H%M%S)"`. Do not reuse a tag for different image contents. Build committed application code when using the SHA-based default. The target also updates `k8s/core/kustomization.yaml`; review and commit that image-tag change so the cluster manifest records the exact image versions. The first build can take time because it downloads base images and Maven/npm dependencies. The Deployments use `imagePullPolicy: Never`, so the image must be imported before a Kubernetes rollout.
+This target builds Patient Service, API Gateway, and the frontend with the same versioned tag, then imports those images into the K3d nodes. The local image names match the GHCR names in Kustomize, so the same manifests work with imported images. By default the tag is the current Git commit SHA; for uncommitted development builds, supply a unique tag such as `make build-all IMAGE_TAG="local-$(date -u +%Y%m%d%H%M%S)"`. Do not reuse a tag for different image contents. The target also updates `k8s/core/kustomization.yaml`; review and commit that image-tag change so the cluster manifest records the exact image versions. The first build can take time because it downloads base images and Maven/npm dependencies. The Deployments use `imagePullPolicy: IfNotPresent`, so Kubernetes uses the imported image when present and otherwise attempts to pull it from GHCR.
 
 ## 5. Deploy the platform
 
@@ -150,6 +150,8 @@ make deploy-all
 ```
 
 Before importing images or applying manifests, the Makefile checks that the active context is `k3d-hashimoto-cluster` to avoid deploying to another cluster by mistake.
+
+These `make deploy-*` commands are the manual local workflow. If Argo CD is managing the same resources, use the GitOps process in [GitOps with Argo CD on local K3d](gitops-k3d.md) instead of applying them again with `kubectl` or `make`.
 
 Kubernetes Secrets contain development-only passwords (`123` and `admin`). Never use these values outside your local machine. The local image flow imports image tags into K3d. For a remote cluster, publish versioned images to a registry, enforce tag immutability or deploy by digest, configure image pull credentials, and use a pull policy that permits registry access.
 
