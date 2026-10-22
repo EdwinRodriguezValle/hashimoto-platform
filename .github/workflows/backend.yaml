@@ -6,7 +6,7 @@ on:
       - 'api-gateway/**'
       - 'patient-service/**'
       - 'pom.xml'
-      - '.github/workflows/backend-ci.yaml'
+      - '.github/workflows/backend.yaml'
 
 jobs:
   validate-backend:
@@ -23,4 +23,4 @@ jobs:
           cache: 'maven'
 
       - name: Compile and Verify with Maven
-        run: mvn clean verify -DskipTests=true # 👈 Saltamos tests de momento para validar la base de la compilación
+        run: mvn clean verify
