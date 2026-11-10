@@ -15,10 +15,10 @@ resources:
 images:
   - name: hashimoto/patient-service
     newName: ghcr.io/edwinrodriguezvalle/patient-service
-    newTag: "a7904384d258"
+    newTag: "bf1f91e4e80c"
   - name: hashimoto/api-gateway
     newName: ghcr.io/edwinrodriguezvalle/api-gateway
-    newTag: "a7904384d258"
+    newTag: "bf1f91e4e80c"
   - name: hashimoto/frontend
     newName: ghcr.io/edwinrodriguezvalle/hashimoto-frontend
-    newTag: "a7904384d258"
+    newTag: "bf1f91e4e80c"
