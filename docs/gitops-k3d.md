@@ -8,7 +8,7 @@ This guide connects the two Hashimoto repositories and deploys the platform to a
 - [`hashimoto-manifests`](https://github.com/EdwinRodriguezValle/hashimoto-manifests) contains Argo CD bootstrap settings and `Application` resources that connect Argo CD to the application repository.
 - K3d is the local Kubernetes cluster. Argo CD pulls desired configuration from Git; GitHub Actions does not connect inbound to your computer.
 
-The root `Application`, `hashimoto-root`, lives in `hashimoto-manifests` and watches `argocd/applications` on branch `main`. It creates two child Applications: one manages namespaces from `hashimoto-manifests/namespaces`, and `hashimoto-api-gateway` reads `hashimoto-platform` branch `main`, path `k8s`. Despite its display name, that workload Application deploys everything included by `k8s/kustomization.yaml`: namespaces, infrastructure, workloads, and monitoring resources.
+The root `Application`, `hashimoto-root`, lives in `hashimoto-manifests` and watches `argocd/applications` on branch `main`. It creates two child Applications: one manages namespaces from `hashimoto-manifests/namespaces`, and `hashimoto-api-gateway` reads `hashimoto-platform` branch `main`, path `k8s`. Despite its display name, that workload Application deploys the infrastructure, workloads, and monitoring resources included by `k8s/kustomization.yaml`. The namespaces are managed only by the namespace Application in `hashimoto-manifests`; `k8s/namespaces.yaml` remains for the manual Makefile deployment and is deliberately excluded from the Argo CD Kustomize root.
 
 ## Delivery flow
 

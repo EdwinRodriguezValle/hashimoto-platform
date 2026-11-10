@@ -13,7 +13,7 @@ Esta carpeta contiene los manifiestos Kubernetes usados para ejecutar la platafo
 
 ```text
 k8s/
-├── namespaces.yaml
+├── namespaces.yaml       # Makefile manual; los namespaces de Argo CD viven en hashimoto-manifests
 ├── core/
 │   ├── platform-env.yaml
 │   ├── api-gateway/       # Gateway e Ingress de la API
@@ -40,7 +40,7 @@ make cluster-create
 make deploy-all
 ```
 
-`make cluster-create` crea K3d con Traefik, publica los puertos locales y selecciona el contexto del proyecto. `make deploy-all` comprueba ese contexto, construye e importa las imágenes y aplica las capas de infraestructura, aplicación y observabilidad. Ninguno de esos targets instala Docker, kubectl, k3d o Make en el host. La guía de incorporación contiene los pasos de instalación, `/etc/hosts` y verificación.
+`make cluster-create` crea K3d con Traefik, publica los puertos locales y selecciona el contexto del proyecto. `make deploy-all` comprueba ese contexto, construye e importa las imágenes y aplica las capas de infraestructura, aplicación y observabilidad, incluidos los namespaces de `namespaces.yaml`. En el flujo GitOps, la aplicación de namespaces de `hashimoto-manifests` los administra; el root `k8s/kustomization.yaml` excluye ese archivo para evitar que dos aplicaciones sean propietarias de los mismos recursos. Ninguno de esos targets instala Docker, kubectl, k3d o Make en el host. La guía de incorporación contiene los pasos de instalación, `/etc/hosts` y verificación.
 
 Para ver el estado:
 
