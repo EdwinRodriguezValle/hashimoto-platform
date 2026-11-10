@@ -1,0 +1,41 @@
+name: Validate Kubernetes Manifests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'k8s/**'
+      - '.github/workflows/validate-k8s.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'k8s/**'
+      - '.github/workflows/validate-k8s.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Render and validate k8s
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out platform
+        uses: actions/checkout@v4
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Install Kubeconform
+        run: |
+          curl --fail --location --silent --show-error \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+            --output /tmp/kubeconform.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp kubeconform
+          sudo install /tmp/kubeconform /usr/local/bin/kubeconform
+
+      - name: Render platform manifests
+        run: kustomize build k8s > /tmp/hashimoto-platform-k8s.yaml
+
+      - name: Validate Kubernetes schemas
+        run: kubeconform -summary -strict -ignore-missing-schemas /tmp/hashimoto-platform-k8s.yaml
