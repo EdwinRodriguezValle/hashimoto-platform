@@ -185,6 +185,8 @@ docker-compose.yaml      Full local Docker development stack
 
 Generated logs are stored under `./logs/` and excluded from Git. Do not use blanket `chmod 777` permissions. If a local permission error occurs, inspect the owner and mode of the specific file or directory and fix only that path.
 
+Check action in github. This line is just for test de ci/cd
+
 ## Documentation
 
 - [Tentative 12-month roadmap](RoadMap.md)
